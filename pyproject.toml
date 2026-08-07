@@ -1,0 +1,66 @@
+[project]
+name = "aif-qwen-agent"
+version = "0.1.0"
+description = "Qwen3-8B active-inference agent research harness"
+readme = "README.md"
+authors = [
+    { name = "Anton Vice", email = "a1996nton@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "httpx>=0.28",
+    "huggingface-hub>=0.34",
+    "numpy>=2.2",
+    "pandas>=2.2",
+    "psutil>=7.0",
+    "pydantic>=2.11",
+    "pydantic-settings>=2.10",
+    "pyyaml>=6.0",
+    "rich>=14.0",
+    "scipy>=1.15",
+    "structlog>=25.4",
+    "typer>=0.16",
+]
+
+[project.optional-dependencies]
+model = [
+    "accelerate>=1.9",
+    "safetensors>=0.5",
+    "sentencepiece>=0.2",
+    "torch>=2.7",
+    "transformers>=4.51",
+]
+
+[dependency-groups]
+dev = [
+    "hypothesis>=6.135",
+    "mypy>=1.16",
+    "pytest>=8.4",
+    "pytest-asyncio>=1.0",
+    "pytest-cov>=6.2",
+    "ruff>=0.12",
+    "types-pyyaml>=6.0",
+    "types-psutil>=7.0",
+]
+
+[project.scripts]
+aif-qwen-agent = "aif_qwen_agent:main"
+
+[build-system]
+requires = ["uv_build>=0.11.16,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true

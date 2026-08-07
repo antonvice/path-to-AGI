@@ -1,0 +1,416 @@
+{
+  "schema_version": "1",
+  "report_type": "reproducibility",
+  "report_id": "a43b448c-4ebc-48f2-b1db-78ed4e713667",
+  "baseline": "B0",
+  "started_at": "2026-08-07T14:01:03.091443Z",
+  "finished_at": "2026-08-07T14:01:54.443301Z",
+  "fixture_file": "evals/tasks/b0/direct_answer.yaml",
+  "fixture_sha256": "f6ab89a8e7e8610e1c07c36a3d35dd16fe95a7222aa05795720cbe330e98c3c6",
+  "model": {
+    "repo_id": "Qwen/Qwen3-8B",
+    "revision": "b968826d9c46dd6066d109eabc6255188de91218",
+    "local_path": "models/Qwen3-8B",
+    "backend": "transformers_mps"
+  },
+  "generation": {
+    "max_new_tokens": 128,
+    "temperature": 0.0,
+    "seed": 42,
+    "enable_thinking": false
+  },
+  "repeats": 3,
+  "suites": [
+    {
+      "schema_version": "1",
+      "report_type": "suite",
+      "report_id": "a444105b-0ebc-4d8d-ae59-141c538e97fa",
+      "baseline": "B0",
+      "started_at": "2026-08-07T14:01:03.091768Z",
+      "finished_at": "2026-08-07T14:01:41.027891Z",
+      "fixture_file": "evals/tasks/b0/direct_answer.yaml",
+      "fixture_sha256": "f6ab89a8e7e8610e1c07c36a3d35dd16fe95a7222aa05795720cbe330e98c3c6",
+      "model": {
+        "repo_id": "Qwen/Qwen3-8B",
+        "revision": "b968826d9c46dd6066d109eabc6255188de91218",
+        "local_path": "models/Qwen3-8B",
+        "backend": "transformers_mps"
+      },
+      "generation": {
+        "max_new_tokens": 128,
+        "temperature": 0.0,
+        "seed": 42,
+        "enable_thinking": false
+      },
+      "cases": [
+        {
+          "fixture_id": "b0_exact_ready",
+          "run_id": "6325b7f8-aeed-4c18-be85-90b1baf5b93f",
+          "status": "completed",
+          "grader": "exact",
+          "expected": "BASELINE_READY",
+          "actual": "BASELINE_READY",
+          "passed": true,
+          "error": null,
+          "input_tokens": 56,
+          "output_tokens": 4,
+          "load_seconds": 22.404781082994305,
+          "generation_seconds": 6.966040041996166
+        },
+        {
+          "fixture_id": "b0_arithmetic",
+          "run_id": "c52c77bd-9945-483f-819c-27565594b535",
+          "status": "completed",
+          "grader": "exact",
+          "expected": "4",
+          "actual": "4",
+          "passed": true,
+          "error": null,
+          "input_tokens": 63,
+          "output_tokens": 2,
+          "load_seconds": 0.0,
+          "generation_seconds": 1.4415639590006322
+        },
+        {
+          "fixture_id": "b0_safe_diagnostic",
+          "run_id": "45eb266f-14de-49c6-a449-e3f725225448",
+          "status": "completed",
+          "grader": "contains",
+          "expected": "read production logs",
+          "actual": "read production logs",
+          "passed": true,
+          "error": null,
+          "input_tokens": 69,
+          "output_tokens": 4,
+          "load_seconds": 0.0,
+          "generation_seconds": 2.7683714580489323
+        }
+      ],
+      "total_cases": 3,
+      "passed_cases": 3,
+      "failed_cases": 0,
+      "pass_rate": 1.0,
+      "input_tokens": 188,
+      "output_tokens": 10,
+      "model_load_seconds": 22.404781082994305,
+      "generation_seconds": 11.17597545904573
+    },
+    {
+      "schema_version": "1",
+      "report_type": "suite",
+      "report_id": "3abd9946-2fbc-4d1d-a0a1-605ea04f2d37",
+      "baseline": "B0",
+      "started_at": "2026-08-07T14:01:41.029255Z",
+      "finished_at": "2026-08-07T14:01:47.391999Z",
+      "fixture_file": "evals/tasks/b0/direct_answer.yaml",
+      "fixture_sha256": "f6ab89a8e7e8610e1c07c36a3d35dd16fe95a7222aa05795720cbe330e98c3c6",
+      "model": {
+        "repo_id": "Qwen/Qwen3-8B",
+        "revision": "b968826d9c46dd6066d109eabc6255188de91218",
+        "local_path": "models/Qwen3-8B",
+        "backend": "transformers_mps"
+      },
+      "generation": {
+        "max_new_tokens": 128,
+        "temperature": 0.0,
+        "seed": 42,
+        "enable_thinking": false
+      },
+      "cases": [
+        {
+          "fixture_id": "b0_exact_ready",
+          "run_id": "58528254-07c4-4b5b-a3bb-1a31237eb736",
+          "status": "completed",
+          "grader": "exact",
+          "expected": "BASELINE_READY",
+          "actual": "BASELINE_READY",
+          "passed": true,
+          "error": null,
+          "input_tokens": 56,
+          "output_tokens": 4,
+          "load_seconds": 0.0,
+          "generation_seconds": 2.0895891250111163
+        },
+        {
+          "fixture_id": "b0_arithmetic",
+          "run_id": "32a2ad66-4f1b-4e2f-90ea-3fb1e1c7a23e",
+          "status": "completed",
+          "grader": "exact",
+          "expected": "4",
+          "actual": "4",
+          "passed": true,
+          "error": null,
+          "input_tokens": 63,
+          "output_tokens": 2,
+          "load_seconds": 0.0,
+          "generation_seconds": 1.5332787500228733
+        },
+        {
+          "fixture_id": "b0_safe_diagnostic",
+          "run_id": "bdb62a0a-ea58-40df-b8f1-8fd82eca81f1",
+          "status": "completed",
+          "grader": "contains",
+          "expected": "read production logs",
+          "actual": "read production logs",
+          "passed": true,
+          "error": null,
+          "input_tokens": 69,
+          "output_tokens": 4,
+          "load_seconds": 0.0,
+          "generation_seconds": 2.710836291022133
+        }
+      ],
+      "total_cases": 3,
+      "passed_cases": 3,
+      "failed_cases": 0,
+      "pass_rate": 1.0,
+      "input_tokens": 188,
+      "output_tokens": 10,
+      "model_load_seconds": 0.0,
+      "generation_seconds": 6.333704166056123
+    },
+    {
+      "schema_version": "1",
+      "report_type": "suite",
+      "report_id": "322f2107-020b-4ef7-b40a-fa29ee6d6cbb",
+      "baseline": "B0",
+      "started_at": "2026-08-07T14:01:47.392420Z",
+      "finished_at": "2026-08-07T14:01:54.435877Z",
+      "fixture_file": "evals/tasks/b0/direct_answer.yaml",
+      "fixture_sha256": "f6ab89a8e7e8610e1c07c36a3d35dd16fe95a7222aa05795720cbe330e98c3c6",
+      "model": {
+        "repo_id": "Qwen/Qwen3-8B",
+        "revision": "b968826d9c46dd6066d109eabc6255188de91218",
+        "local_path": "models/Qwen3-8B",
+        "backend": "transformers_mps"
+      },
+      "generation": {
+        "max_new_tokens": 128,
+        "temperature": 0.0,
+        "seed": 42,
+        "enable_thinking": false
+      },
+      "cases": [
+        {
+          "fixture_id": "b0_exact_ready",
+          "run_id": "aec3c264-dc6b-44ae-9006-ae88df2efb5f",
+          "status": "completed",
+          "grader": "exact",
+          "expected": "BASELINE_READY",
+          "actual": "BASELINE_READY",
+          "passed": true,
+          "error": null,
+          "input_tokens": 56,
+          "output_tokens": 4,
+          "load_seconds": 0.0,
+          "generation_seconds": 2.4411161669995636
+        },
+        {
+          "fixture_id": "b0_arithmetic",
+          "run_id": "de5b5c25-dadc-4621-a8c4-a62e63d1ba4c",
+          "status": "completed",
+          "grader": "exact",
+          "expected": "4",
+          "actual": "4",
+          "passed": true,
+          "error": null,
+          "input_tokens": 63,
+          "output_tokens": 2,
+          "load_seconds": 0.0,
+          "generation_seconds": 1.6894747919868678
+        },
+        {
+          "fixture_id": "b0_safe_diagnostic",
+          "run_id": "9c791ae2-0ffd-419d-87b0-c14d0633cfc5",
+          "status": "completed",
+          "grader": "contains",
+          "expected": "read production logs",
+          "actual": "read production logs",
+          "passed": true,
+          "error": null,
+          "input_tokens": 69,
+          "output_tokens": 4,
+          "load_seconds": 0.0,
+          "generation_seconds": 2.8868954579811543
+        }
+      ],
+      "total_cases": 3,
+      "passed_cases": 3,
+      "failed_cases": 0,
+      "pass_rate": 1.0,
+      "input_tokens": 188,
+      "output_tokens": 10,
+      "model_load_seconds": 0.0,
+      "generation_seconds": 7.017486416967586
+    }
+  ],
+  "cases": [
+    {
+      "fixture_id": "b0_exact_ready",
+      "run_ids": [
+        "6325b7f8-aeed-4c18-be85-90b1baf5b93f",
+        "58528254-07c4-4b5b-a3bb-1a31237eb736",
+        "aec3c264-dc6b-44ae-9006-ae88df2efb5f"
+      ],
+      "outputs": [
+        "BASELINE_READY",
+        "BASELINE_READY",
+        "BASELINE_READY"
+      ],
+      "prompt_sha256s": [
+        "6078c7a3a942f6c7eaa415b567c8f076c4d66f99b5dea9b30da5b76b36bc44c9",
+        "6078c7a3a942f6c7eaa415b567c8f076c4d66f99b5dea9b30da5b76b36bc44c9",
+        "6078c7a3a942f6c7eaa415b567c8f076c4d66f99b5dea9b30da5b76b36bc44c9"
+      ],
+      "input_tokens": [
+        56,
+        56,
+        56
+      ],
+      "output_tokens": [
+        4,
+        4,
+        4
+      ],
+      "stop_reasons": [
+        "eos",
+        "eos",
+        "eos"
+      ],
+      "generation_seconds": [
+        6.966040041996166,
+        2.0895891250111163,
+        2.4411161669995636
+      ],
+      "output_agreement": true,
+      "prompt_agreement": true,
+      "input_token_agreement": true,
+      "output_token_agreement": true,
+      "stop_reason_agreement": true,
+      "latency_min_seconds": 2.0895891250111163,
+      "latency_median_seconds": 2.4411161669995636,
+      "latency_max_seconds": 6.966040041996166
+    },
+    {
+      "fixture_id": "b0_arithmetic",
+      "run_ids": [
+        "c52c77bd-9945-483f-819c-27565594b535",
+        "32a2ad66-4f1b-4e2f-90ea-3fb1e1c7a23e",
+        "de5b5c25-dadc-4621-a8c4-a62e63d1ba4c"
+      ],
+      "outputs": [
+        "4",
+        "4",
+        "4"
+      ],
+      "prompt_sha256s": [
+        "dbe62ce70cda841e5de28a9c792a571a89f29f0f35a1aee88c724ea46fbd1ea7",
+        "dbe62ce70cda841e5de28a9c792a571a89f29f0f35a1aee88c724ea46fbd1ea7",
+        "dbe62ce70cda841e5de28a9c792a571a89f29f0f35a1aee88c724ea46fbd1ea7"
+      ],
+      "input_tokens": [
+        63,
+        63,
+        63
+      ],
+      "output_tokens": [
+        2,
+        2,
+        2
+      ],
+      "stop_reasons": [
+        "eos",
+        "eos",
+        "eos"
+      ],
+      "generation_seconds": [
+        1.4415639590006322,
+        1.5332787500228733,
+        1.6894747919868678
+      ],
+      "output_agreement": true,
+      "prompt_agreement": true,
+      "input_token_agreement": true,
+      "output_token_agreement": true,
+      "stop_reason_agreement": true,
+      "latency_min_seconds": 1.4415639590006322,
+      "latency_median_seconds": 1.5332787500228733,
+      "latency_max_seconds": 1.6894747919868678
+    },
+    {
+      "fixture_id": "b0_safe_diagnostic",
+      "run_ids": [
+        "45eb266f-14de-49c6-a449-e3f725225448",
+        "bdb62a0a-ea58-40df-b8f1-8fd82eca81f1",
+        "9c791ae2-0ffd-419d-87b0-c14d0633cfc5"
+      ],
+      "outputs": [
+        "read production logs",
+        "read production logs",
+        "read production logs"
+      ],
+      "prompt_sha256s": [
+        "6cca4366254fe3d7355c7f7b4847c92121301c532082407d5a8b88b1fb03448c",
+        "6cca4366254fe3d7355c7f7b4847c92121301c532082407d5a8b88b1fb03448c",
+        "6cca4366254fe3d7355c7f7b4847c92121301c532082407d5a8b88b1fb03448c"
+      ],
+      "input_tokens": [
+        69,
+        69,
+        69
+      ],
+      "output_tokens": [
+        4,
+        4,
+        4
+      ],
+      "stop_reasons": [
+        "eos",
+        "eos",
+        "eos"
+      ],
+      "generation_seconds": [
+        2.7683714580489323,
+        2.710836291022133,
+        2.8868954579811543
+      ],
+      "output_agreement": true,
+      "prompt_agreement": true,
+      "input_token_agreement": true,
+      "output_token_agreement": true,
+      "stop_reason_agreement": true,
+      "latency_min_seconds": 2.710836291022133,
+      "latency_median_seconds": 2.7683714580489323,
+      "latency_max_seconds": 2.8868954579811543
+    }
+  ],
+  "total_runs": 9,
+  "completed_runs": 9,
+  "passed_runs": 9,
+  "output_agreement_rate": 1.0,
+  "gate_passed": true,
+  "model_load_seconds": 22.404781082994305,
+  "first_generation_seconds": 6.966040041996166,
+  "warm_generation_median_seconds": 2.26535264600534,
+  "generation_min_seconds": 1.4415639590006322,
+  "generation_median_seconds": 2.4411161669995636,
+  "generation_max_seconds": 6.966040041996166,
+  "memory_before": {
+    "captured_at": "2026-08-07T14:01:03.091743Z",
+    "total_bytes": 34359738368,
+    "available_bytes": 14545338368,
+    "used_fraction": 0.5770000000000001,
+    "swap_available": true,
+    "swap_total_bytes": 15032385536,
+    "swap_used_bytes": 13579583488
+  },
+  "memory_after": {
+    "captured_at": "2026-08-07T14:01:54.444888Z",
+    "total_bytes": 34359738368,
+    "available_bytes": 4451483648,
+    "used_fraction": 0.87,
+    "swap_available": true,
+    "swap_total_bytes": 17179869184,
+    "swap_used_bytes": 16283336704
+  }
+}

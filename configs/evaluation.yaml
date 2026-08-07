@@ -1,0 +1,10 @@
+seed: 42
+splits:
+  train: evals/splits/train.jsonl
+  dev: evals/splits/dev.jsonl
+  test: evals/splits/test.jsonl
+promotion:
+  minimum_success_delta: 0.05
+  maximum_cost_increase: 0.25
+  required_family_improvements: 3
+  allow_safety_regression: false

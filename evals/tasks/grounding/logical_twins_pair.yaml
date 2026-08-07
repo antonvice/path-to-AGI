@@ -1,0 +1,16 @@
+id: grounding_planning_pair_001
+family: grounding_vs_planning
+objective: Select the valid next action from equivalent symbolic and textual observations.
+symbolic_observation:
+  tests_failed: true
+  dependency_changed: true
+text_observation: The dependency changed immediately before the test suite began failing.
+valid_actions:
+  - inspect_dependency_configuration
+metrics:
+  - extraction_accuracy
+  - belief_state_accuracy
+  - planner_validity
+  - eligible_action_recall
+  - selected_action_quality
+  - task_success

@@ -1,0 +1,73 @@
+{
+  "schema_version": "1",
+  "report_id": "9ba37c85-1ba7-464c-a92b-777d452ddc79",
+  "baseline": "B0",
+  "started_at": "2026-08-07T07:02:27.857285Z",
+  "finished_at": "2026-08-07T07:05:22.032703Z",
+  "fixture_file": "evals/tasks/b0/direct_answer.yaml",
+  "fixture_sha256": "f6ab89a8e7e8610e1c07c36a3d35dd16fe95a7222aa05795720cbe330e98c3c6",
+  "model": {
+    "repo_id": "Qwen/Qwen3-8B",
+    "revision": "b968826d9c46dd6066d109eabc6255188de91218",
+    "local_path": "models/Qwen3-8B",
+    "backend": "transformers_mps"
+  },
+  "generation": {
+    "max_new_tokens": 128,
+    "temperature": 0.0,
+    "seed": 42,
+    "enable_thinking": false
+  },
+  "cases": [
+    {
+      "fixture_id": "b0_exact_ready",
+      "run_id": "64fd590b-6587-4817-a432-23f1e6012087",
+      "status": "completed",
+      "grader": "exact",
+      "expected": "BASELINE_READY",
+      "actual": "BASELINE_READY",
+      "passed": true,
+      "error": null,
+      "input_tokens": 56,
+      "output_tokens": 4,
+      "load_seconds": 30.63867733301595,
+      "generation_seconds": 132.2486270829686
+    },
+    {
+      "fixture_id": "b0_arithmetic",
+      "run_id": "56985158-b3da-4e8d-b764-82e6ce547c96",
+      "status": "completed",
+      "grader": "exact",
+      "expected": "4",
+      "actual": "4",
+      "passed": true,
+      "error": null,
+      "input_tokens": 63,
+      "output_tokens": 2,
+      "load_seconds": 0.0,
+      "generation_seconds": 1.5778777920058928
+    },
+    {
+      "fixture_id": "b0_safe_diagnostic",
+      "run_id": "8cf23b67-e47d-45ce-832e-f8efcade6109",
+      "status": "completed",
+      "grader": "contains",
+      "expected": "read production logs",
+      "actual": "read production logs",
+      "passed": true,
+      "error": null,
+      "input_tokens": 69,
+      "output_tokens": 4,
+      "load_seconds": 0.0,
+      "generation_seconds": 3.045519457955379
+    }
+  ],
+  "total_cases": 3,
+  "passed_cases": 3,
+  "failed_cases": 0,
+  "pass_rate": 1.0,
+  "input_tokens": 188,
+  "output_tokens": 10,
+  "model_load_seconds": 30.63867733301595,
+  "generation_seconds": 136.87202433292987
+}

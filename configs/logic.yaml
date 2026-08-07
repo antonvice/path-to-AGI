@@ -1,0 +1,7 @@
+backend: python_predicates
+max_inference_rounds: 8
+contradiction_support_threshold: 0.5
+optional_backends:
+  lnn:
+    enabled: false
+    install_in_isolated_environment: true

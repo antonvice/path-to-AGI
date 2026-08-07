@@ -1,4 +1,5 @@
 from enum import StrEnum
+from hashlib import sha256
 from pathlib import Path
 from statistics import median
 from typing import Annotated, Any, Literal
@@ -7,6 +8,86 @@ from uuid import UUID
 from pydantic import AwareDatetime, BaseModel, Field, model_validator
 
 UnitInterval = Annotated[float, Field(ge=0.0, le=1.0)]
+ToolPhase = Literal["authorization", "execution", "verification"]
+
+
+class ToolErrorCode(StrEnum):
+    OUTSIDE_ALLOWED_ROOT = "outside_allowed_root"
+    SYMLINK_ESCAPE = "symlink_escape"
+    REQUEST_LIMIT_EXCEEDS_POLICY = "request_limit_exceeds_policy"
+    NOT_FOUND = "not_found"
+    NOT_FILE = "not_file"
+    FILE_TOO_LARGE = "file_too_large"
+    INVALID_ENCODING = "invalid_encoding"
+    PERMISSION_DENIED = "permission_denied"
+    IO_ERROR = "io_error"
+    VERIFICATION_FAILED = "verification_failed"
+
+
+class ReadFilePolicy(BaseModel):
+    allowed_roots: list[Path] = Field(min_length=1)
+    max_read_bytes: int = Field(gt=0)
+
+
+class ReadFileRequest(BaseModel):
+    path: str = Field(min_length=1)
+    max_bytes: int = Field(default=131_072, gt=0)
+
+
+class ReadFileObservation(BaseModel):
+    resolved_path: Path
+    content: str
+    byte_count: int = Field(ge=0)
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    encoding: Literal["utf-8"] = "utf-8"
+
+
+class ToolRejection(BaseModel):
+    code: ToolErrorCode
+    phase: ToolPhase
+    message: str
+
+
+class ReadFileTrace(BaseModel):
+    schema_version: Literal["1"] = "1"
+    trace_id: UUID
+    tool: Literal["read_file"] = "read_file"
+    started_at: AwareDatetime
+    finished_at: AwareDatetime
+    request: ReadFileRequest
+    allowed_roots: list[Path] = Field(min_length=1)
+    status: Literal["completed", "rejected"]
+    authorized: bool
+    executed: bool
+    verified: bool
+    observation: ReadFileObservation | None = None
+    rejection: ToolRejection | None = None
+
+    @model_validator(mode="after")
+    def consistent_tool_state(self) -> "ReadFileTrace":
+        if self.finished_at < self.started_at:
+            raise ValueError("finished_at cannot precede started_at")
+        if self.status == "completed":
+            if not (self.authorized and self.executed and self.verified):
+                raise ValueError("completed tool traces require all phases")
+            if self.observation is None or self.rejection is not None:
+                raise ValueError("completed tool traces require only an observation")
+            payload = self.observation.content.encode(self.observation.encoding)
+            if len(payload) != self.observation.byte_count:
+                raise ValueError("observation byte count does not match content")
+            if sha256(payload).hexdigest() != self.observation.sha256:
+                raise ValueError("observation hash does not match content")
+        elif self.observation is not None or self.rejection is None:
+            raise ValueError("rejected tool traces require only a rejection")
+        elif self.rejection.phase == "authorization" and self.authorized:
+            raise ValueError("authorization rejection cannot be authorized")
+        elif self.rejection.phase == "execution" and (not self.authorized or self.executed):
+            raise ValueError("execution rejection requires authorization without execution")
+        elif self.rejection.phase == "verification" and (
+            not self.authorized or not self.executed or self.verified
+        ):
+            raise ValueError("verification rejection requires execution without verification")
+        return self
 
 
 class Task(BaseModel):

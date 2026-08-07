@@ -22,11 +22,25 @@ from aif_qwen_agent.schemas import (
     GenerationConfig,
     ModelIdentity,
     PredictedOutcome,
+    ReadFilePolicy,
+    ReadFileRequest,
     Task,
 )
+from aif_qwen_agent.tools import ReadFileTool, ReadFileTraceStore
 
 app = typer.Typer(no_args_is_help=True)
+tool_app = typer.Typer(no_args_is_help=True)
+app.add_typer(tool_app, name="tool")
 console = Console()
+
+
+def _terminal_safe_text(value: str) -> str:
+    return "".join(
+        character
+        if character in "\n\r\t" or (ord(character) >= 32 and ord(character) != 127)
+        else f"\\x{ord(character):02x}"
+        for character in value
+    )
 
 
 def _build_baseline_runner(config: Path, traces: Path) -> BaselineRunner:
@@ -188,6 +202,36 @@ def regrade_b0(
         console.print(
             f"verified report={result.report_id} passed={result.passed_cases}/{result.total_cases}"
         )
+
+
+@tool_app.command("read-file")
+def read_file_tool(
+    path: str,
+    max_bytes: int = 131_072,
+    config: Path = Path("configs/policy.yaml"),
+    traces: Path = Path("artifacts/b1a/read-file.jsonl"),
+) -> None:
+    """Read one bounded UTF-8 file through the B1a policy gateway."""
+    settings = load_yaml(config)
+    policy = ReadFilePolicy.model_validate(settings["filesystem"])
+    trace = ReadFileTool(policy, ReadFileTraceStore(traces)).run(
+        ReadFileRequest(path=path, max_bytes=max_bytes)
+    )
+    if trace.status == "rejected":
+        if trace.rejection is None:
+            raise RuntimeError("rejected tool trace is missing its reason")
+        console.print(
+            f"[red]{trace.rejection.code}: {trace.rejection.message}[/red]\n"
+            f"[dim]phase={trace.rejection.phase} trace={trace.trace_id} file={traces}[/dim]"
+        )
+        raise typer.Exit(1)
+    if trace.observation is None:
+        raise RuntimeError("completed tool trace is missing its observation")
+    console.print(_terminal_safe_text(trace.observation.content), markup=False)
+    console.print(
+        f"[dim]bytes={trace.observation.byte_count} sha256={trace.observation.sha256} "
+        f"trace={trace.trace_id} file={traces}[/dim]"
+    )
 
 
 def main() -> None:

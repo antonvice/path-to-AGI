@@ -28,6 +28,8 @@ Working now:
   terminal status, and raw output.
 - Deterministic `replay` by run ID without loading or calling the model.
 - Offline `regrade-b0` verification with fixture hashes and tamper detection.
+- B1a typed `read_file` gateway with root containment, symlink-escape rejection, byte budgets,
+  UTF-8 validation, content hashing, independent verification, and durable traces.
 - Typed schemas for beliefs, actions, predicted outcomes, truth bounds, and logical facts.
 - Transparent MVP active-inference score with separately logged terms.
 - Hard policy and logical filtering before action scoring.
@@ -39,7 +41,7 @@ Working now:
 Not implemented yet:
 
 - Independent-process cold-start benchmarking.
-- Sandboxed executable tools.
+- Sandboxed Python and test execution tools.
 - SQLite run, artifact, evaluation, and memory storage.
 - Frozen B0/B1 benchmark reports.
 - Durable belief updates or semantic memory.
@@ -177,6 +179,12 @@ Verify its report entirely from saved traces:
 uv run aif-qwen-agent regrade-b0
 ```
 
+Read a workspace file through the B1a policy gateway:
+
+```bash
+uv run aif-qwen-agent tool read-file README.md
+```
+
 ## Repository map
 
 | Path | Purpose |
@@ -261,43 +269,60 @@ This gate establishes deterministic behavior across repeated suites in one loade
 not erase the earlier 132.25-second independent-process outlier or establish a stable cold-start
 service-level objective.
 
+## B1a read-only tool result
+
+The first production-configured tool traces completed on 2026-08-07:
+
+| Case | Result |
+|---|---|
+| `README.md` | Completed, 12,335 UTF-8 bytes, SHA-256 verified |
+| `../outside.txt` | Rejected during authorization as `outside_allowed_root` |
+
+The traces are stored in `evals/baselines/b1a_read_file_traces.jsonl`. Automated safety coverage
+also includes symlink escape, oversize input, missing paths, directories, invalid UTF-8, excessive
+request limits, modified observations, and trace replay.
+
+This is a local research-harness boundary, not an operating-system security sandbox. It protects
+against the tested path and content hazards but does not claim resistance to a malicious local
+process racing filesystem mutations.
+
 ## What can be completed in the next hour
 
-The next useful one-hour deliverable is B1a: a bounded, read-only typed tool gateway.
+The next useful one-hour deliverable is B1b: one model-selected, read-only tool step.
 
 Target command:
 
 ```bash
-uv run aif-qwen-agent tool read-file README.md
+uv run aif-qwen-agent agent "What model revision does configs/qwen3_8b.yaml specify?"
 ```
 
 It should:
 
-- Resolve requested paths against configured workspace roots.
-- Reject traversal, symlink escape, directories, and files over the byte budget.
-- Return a typed observation with resolved path, bounded content, byte count, and SHA-256 hash.
-- Record authorization, execution, verification, timing, and terminal status.
-- Expose no unrestricted shell execution.
+- Ask Qwen for one schema-valid `read_file`, `answer`, or `stop` action.
+- Apply hard policy filtering before executing a proposed read.
+- Feed the verified observation back to Qwen for the final answer.
+- Record proposal, authorization, tool trace, evidence hash, answer, tokens, and latency.
+- Compare file-dependent tasks against the answer-only B0 baseline.
 
 Realistic 60-minute scope:
 
-1. Minutes 0-15: add typed tool request, observation, verification, and error schemas.
-2. Minutes 15-30: implement canonical path resolution and root/size checks.
-3. Minutes 30-40: implement bounded `read_file` plus content hashing.
-4. Minutes 40-50: add traversal, symlink, oversize, missing-file, and valid-read tests.
-5. Minutes 50-60: add the CLI command and freeze the first B1a fixture results.
+1. Minutes 0-15: add structured one-step proposal and agent-trace schemas.
+2. Minutes 15-30: add schema-constrained proposal parsing with bounded retries.
+3. Minutes 30-40: connect eligible `read_file` actions to the verified gateway.
+4. Minutes 40-50: add evidence-grounded final-answer generation and fake-adapter tests.
+5. Minutes 50-60: run file-dependent fixtures against B0 and freeze the first B1b traces.
 
 Definition of done for the hour:
 
-- No request can escape configured roots.
-- Every successful observation is hash-verifiable.
-- Every rejected request has a typed reason and trace.
+- Invalid or forbidden proposals never execute.
+- Every factual answer cites a verified tool observation hash.
+- File-dependent success improves over B0 on the frozen fixtures.
 - Tests, Ruff, and strict mypy remain green.
-- B1a remains read-only and does not authorize Python, tests, shell commands, or external writes.
+- B1b remains one-step and read-only; Python, tests, shell, network, and writes stay unavailable.
 
 Explicitly out of scope for that hour:
 
-- Tool execution.
+- Multi-step tool execution.
 - SQLite memory.
 - A multi-step controller loop.
 - LNN installation.

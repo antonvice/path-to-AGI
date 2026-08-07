@@ -1,0 +1,27 @@
+baseline: B1a
+tool: read_file
+cases:
+  - id: valid_workspace_file
+    path: README.md
+    expected_status: completed
+    expected_verified: true
+  - id: parent_traversal
+    path: ../outside.txt
+    expected_status: rejected
+    expected_code: outside_allowed_root
+  - id: symlink_escape
+    generated_fixture: symlink_inside_root_to_file_outside_root
+    expected_status: rejected
+    expected_code: symlink_escape
+  - id: oversized_file
+    generated_fixture: utf8_file_larger_than_request_limit
+    expected_status: rejected
+    expected_code: file_too_large
+  - id: missing_file
+    path: missing.txt
+    expected_status: rejected
+    expected_code: not_found
+  - id: directory
+    path: .
+    expected_status: rejected
+    expected_code: not_file

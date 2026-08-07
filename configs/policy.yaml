@@ -2,6 +2,7 @@ filesystem:
   mode: read_only
   allowed_roots:
     - .
+  max_read_bytes: 131072
 network:
   allowed: false
 budgets:

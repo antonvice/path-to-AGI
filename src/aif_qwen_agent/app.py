@@ -8,6 +8,11 @@ from rich.table import Table
 from aif_qwen_agent.agent import AgentTraceStore, OneStepAgent
 from aif_qwen_agent.aif_score import aif_score
 from aif_qwen_agent.artifacts import TraceStore
+from aif_qwen_agent.b1_evaluation import (
+    evaluate_b1,
+    load_b1_report,
+    verify_b1_report,
+)
 from aif_qwen_agent.baseline import BaselineRunner
 from aif_qwen_agent.config import load_yaml
 from aif_qwen_agent.evaluation import (
@@ -95,6 +100,43 @@ def _build_agent_runner(
         AgentTraceStore(traces),
         max_proposal_attempts=policy_settings["budgets"]["max_retries_per_action"] + 1,
     )
+
+
+def _build_b1_runners(
+    config: Path,
+    policy_config: Path,
+    baseline_traces: Path,
+    agent_traces: Path,
+    tool_traces: Path,
+) -> tuple[BaselineRunner, OneStepAgent]:
+    settings = load_yaml(config)
+    policy_settings = load_yaml(policy_config)
+    model = ModelIdentity(
+        repo_id=settings["model"]["repo_id"],
+        revision=settings["model"]["revision"],
+        local_path=Path(settings["model"]["local_path"]),
+        backend=settings["inference"]["backend"],
+    )
+    generation = GenerationConfig.model_validate(settings["inference"])
+    adapter = TransformersAdapter(
+        model_path=model.local_path,
+        backend=model.backend,
+        dtype=settings["model"]["dtype"],
+        enable_thinking=generation.enable_thinking,
+    )
+    baseline = BaselineRunner(adapter, model, generation, TraceStore(baseline_traces))
+    agent = OneStepAgent(
+        adapter,
+        model,
+        generation,
+        ReadFileTool(
+            ReadFilePolicy.model_validate(policy_settings["filesystem"]),
+            ReadFileTraceStore(tool_traces),
+        ),
+        AgentTraceStore(agent_traces),
+        max_proposal_attempts=policy_settings["budgets"]["max_retries_per_action"] + 1,
+    )
+    return baseline, agent
 
 
 @app.command()
@@ -264,6 +306,70 @@ def regrade_b0(
         console.print(
             f"verified report={result.report_id} passed={result.passed_cases}/{result.total_cases}"
         )
+
+
+@app.command("eval-b1")
+def eval_b1(
+    fixtures: Path = Path("evals/tasks/b1c/suite.yaml"),
+    config: Path = Path("configs/qwen3_8b.yaml"),
+    policy: Path = Path("configs/policy.yaml"),
+    baseline_traces: Path = Path("artifacts/b1c/b0.jsonl"),
+    agent_traces: Path = Path("artifacts/b1c/b1.jsonl"),
+    tool_traces: Path = Path("artifacts/b1c/read-file.jsonl"),
+    report: Path = Path("artifacts/b1c/report.json"),
+) -> None:
+    """Run the shared-model B0/B1b quality and safety suite."""
+    baseline, agent = _build_b1_runners(
+        config,
+        policy,
+        baseline_traces,
+        agent_traces,
+        tool_traces,
+    )
+    result = evaluate_b1(baseline, agent, fixtures, report)
+    table = Table("Fixture", "Kind", "B0", "B1", "Agent status", "Retries")
+    for case in result.cases:
+        table.add_row(
+            case.fixture_id,
+            case.kind,
+            "-" if case.baseline_passed is None else ("PASS" if case.baseline_passed else "FAIL"),
+            "PASS" if case.agent_passed else "FAIL",
+            case.agent_status,
+            str(case.proposal_attempts - 1),
+        )
+    console.print(table)
+    console.print(
+        f"[dim]gate={'PASS' if result.gate_passed else 'FAIL'} "
+        f"grounded_b0={result.baseline_passed_cases}/{result.grounded_cases} "
+        f"grounded_b1={result.agent_passed_cases}/{result.grounded_cases} "
+        f"safety={result.safety_passed_cases}/{result.safety_cases} "
+        f"violations={result.safety_violations} retries={result.proposal_retries} "
+        f"load={result.model_load_seconds:.2f}s "
+        f"b0_generation={result.baseline_generation_seconds:.2f}s "
+        f"b1_generation={result.agent_generation_seconds:.2f}s report={report}[/dim]"
+    )
+
+
+@app.command("regrade-b1")
+def regrade_b1(
+    report: Path = Path("artifacts/b1c/report.json"),
+    fixtures: Path = Path("evals/tasks/b1c/suite.yaml"),
+    baseline_traces: Path = Path("artifacts/b1c/b0.jsonl"),
+    agent_traces: Path = Path("artifacts/b1c/b1.jsonl"),
+) -> None:
+    """Verify and regrade a B1c report using only saved traces."""
+    result = load_b1_report(report)
+    verify_b1_report(
+        result,
+        fixtures,
+        TraceStore(baseline_traces),
+        AgentTraceStore(agent_traces),
+    )
+    console.print(
+        f"verified report={result.report_id} gate={'PASS' if result.gate_passed else 'FAIL'} "
+        f"grounded={result.agent_passed_cases}/{result.grounded_cases} "
+        f"safety={result.safety_passed_cases}/{result.safety_cases}"
+    )
 
 
 @tool_app.command("read-file")

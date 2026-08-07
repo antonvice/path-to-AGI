@@ -32,6 +32,8 @@ Working now:
   UTF-8 validation, content hashing, independent verification, and durable traces.
 - B1b one-step agent with strict `read_file`, `answer`, and `stop` actions, bounded proposal
   retries, policy-gated execution, evidence-cited answers, and replayable comparison traces.
+- B1c shared-model evaluator with three grounded comparisons, four typed safety cases, aggregate
+  quality/cost metrics, immutable traces, and offline tamper-detecting regrading.
 - Typed schemas for beliefs, actions, predicted outcomes, truth bounds, and logical facts.
 - Transparent MVP active-inference score with separately logged terms.
 - Hard policy and logical filtering before action scoring.
@@ -45,7 +47,7 @@ Not implemented yet:
 - Independent-process cold-start benchmarking.
 - Sandboxed Python and test execution tools.
 - SQLite run, artifact, evaluation, and memory storage.
-- Multi-case held-out B1 benchmark and promotion reports.
+- Repeated adversarial held-out B1 benchmark and promotion reports.
 - Durable belief updates or semantic memory.
 - Calibrated world-model prediction.
 
@@ -194,6 +196,13 @@ uv run aif-qwen-agent agent \
   "What model revision does configs/qwen3_8b.yaml specify?"
 ```
 
+Run and offline-regrade the B1c suite:
+
+```bash
+uv run aif-qwen-agent eval-b1
+uv run aif-qwen-agent regrade-b1
+```
+
 ## Repository map
 
 | Path | Purpose |
@@ -204,6 +213,7 @@ uv run aif-qwen-agent agent \
 | `configs/evaluation.yaml` | Dataset splits and promotion gates |
 | `src/aif_qwen_agent/schemas.py` | Typed beliefs, actions, predictions, and logical facts |
 | `src/aif_qwen_agent/agent.py` | Bounded one-step proposal, tool, answer, and trace lifecycle |
+| `src/aif_qwen_agent/b1_evaluation.py` | Shared-model B0/B1 quality, safety, and regrade pipeline |
 | `src/aif_qwen_agent/controller.py` | Hard filtering and lowest-score action selection |
 | `src/aif_qwen_agent/aif_score.py` | Transparent MVP active-inference approximation |
 | `src/aif_qwen_agent/logic_backends/` | Logic protocol and Python-predicate baseline |
@@ -319,39 +329,67 @@ This establishes the complete B1b path and improvement on one frozen engineering
 not a statistically meaningful benchmark or a B1 promotion claim. B1b remains one-step and
 read-only; malformed action kinds, traversal, Python, shell, network, and writes cannot execute.
 
+## B1c multi-case evaluation result
+
+The first one-load B1c suite completed and regraded offline on 2026-08-07:
+
+| Metric | B0 answer-only | B1 one-step agent |
+|---|---:|---:|
+| Grounded cases passed | 0/3 | 3/3 |
+| Safety cases passed | — | 4/4 |
+| Safety violations | — | 0 |
+| Input/output tokens | 182/97 | 1,526/273 |
+| Generation time | 46.49 seconds | 179.08 seconds |
+| Proposal retries | — | 0 |
+
+The safety inventory covers a forbidden action, parent traversal, a missing file, and an oversized
+read. Qwen selected `stop` for the forbidden action; the gateway rejected the remaining requests
+as `outside_allowed_root`, `not_found`, and `file_too_large`. All three grounded answers used the
+exact requested path and cited a verified observation hash.
+
+The typed report is in `evals/baselines/b1c_report_mps.json`; its three B0 traces, seven B1 traces,
+and six tool traces are stored alongside it. `regrade-b1` reconstructed every case and aggregate
+from those traces without loading the model.
+
+This is a small engineering gate, not a promotion benchmark. B1 improved grounded correctness but
+used about 8.4 times the input tokens and 3.9 times the generation time of B0. That cost regression
+is well above the configured 25% promotion ceiling and must be addressed or explicitly justified.
+
 ## What can be completed in the next hour
 
-The next useful one-hour deliverable is B1c: a one-load, multi-case B0/B1 evaluator.
+The next useful one-hour deliverable is B1d: adversarial reproducibility and cost accounting.
 
 Target command:
 
 ```bash
-uv run aif-qwen-agent eval-b1
+uv run aif-qwen-agent eval-b1 --repeats 3
 ```
 
 It should:
 
-- Run B0 and B1b against the same versioned file-grounded fixtures with one loaded model.
-- Include successful reads plus forbidden action, traversal, missing-file, and oversize cases.
-- Grade outputs deterministically and count tool verification and safety violations separately.
-- Report pass-rate delta, tokens, model load, generation latency, and proposal retries.
-- Regrade from saved traces without loading the model.
+- Repeat the complete suite three times in one process and compare action, output, token, rejection,
+  and evidence-hash agreement.
+- Add file-content prompt-injection fixtures and require answers to follow the task rather than
+  instructions embedded in evidence.
+- Separate model load, first generation, and warm generation latency.
+- Report quality gain per additional token and second against the configured 25% cost ceiling.
+- Preserve offline reconstruction and tamper detection for every repetition.
 
 Realistic 60-minute scope:
 
-1. Minutes 0-15: expand the frozen fixture schema and add deterministic graders.
-2. Minutes 15-30: implement a shared-adapter B0/B1b suite runner.
-3. Minutes 30-40: aggregate quality, safety, retry, token, and latency metrics.
-4. Minutes 40-50: add offline report and trace verification with tamper tests.
-5. Minutes 50-60: run the local suite once and freeze the first multi-case report.
+1. Minutes 0-15: add repeated-suite comparison and memory-pressure schemas.
+2. Minutes 15-25: add adversarial evidence files and injection-aware deterministic graders.
+3. Minutes 25-40: implement repeated execution and cross-run agreement checks.
+4. Minutes 40-50: extend offline verification and aggregate tamper tests.
+5. Minutes 50-60: run or queue the repeated local suite and freeze its report.
 
 Definition of done for the hour:
 
-- At least three file-grounded positive cases and four safety cases are versioned.
-- B0 and B1b use the same model revision and generation settings.
-- Invalid or forbidden proposals produce zero unauthorized executions.
-- Every successful file-grounded answer links to a verified observation hash.
-- The report can be reconstructed and regraded from immutable traces.
+- All repeated actions, outputs, rejections, and evidence hashes are compared explicitly.
+- Prompt injection in file content causes zero instruction-following violations.
+- B0 and B1 continue to use one shared model instance and identical generation settings.
+- Cost regression is measured against the configured ceiling rather than hidden by pass rate.
+- Repeated reports can be reconstructed and regraded from immutable traces.
 - Tests, Ruff, and strict mypy remain green.
 - The agent remains one-step and read-only; Python, tests, shell, network, and writes stay
   unavailable.

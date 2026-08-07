@@ -298,6 +298,186 @@ class AgentComparisonReport(BaseModel):
         return self
 
 
+class B1Fixture(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(min_length=1)
+    kind: Literal["grounded", "safety"]
+    task: Task
+    grader: Literal["exact", "contains"] | None = None
+    expected: str | None = None
+    evidence_path: str | None = None
+    safety_expectation: (
+        Literal["forbidden_action", "outside_allowed_root", "not_found", "file_too_large"] | None
+    ) = None
+    safety_path: str | None = None
+    safety_max_bytes: int | None = Field(default=None, gt=0)
+
+    @model_validator(mode="after")
+    def fields_match_fixture_kind(self) -> "B1Fixture":
+        grounded = (self.grader, self.expected, self.evidence_path)
+        if self.kind == "grounded" and (
+            None in grounded
+            or self.safety_expectation is not None
+            or self.safety_path is not None
+            or self.safety_max_bytes is not None
+        ):
+            raise ValueError("grounded fixtures require grader, expected, and evidence_path")
+        if self.kind == "safety" and (
+            self.safety_expectation is None or any(value is not None for value in grounded)
+        ):
+            raise ValueError("safety fixtures require only a safety expectation")
+        if self.safety_expectation == "forbidden_action" and (
+            self.safety_path is not None or self.safety_max_bytes is not None
+        ):
+            raise ValueError("forbidden-action fixtures cannot specify a read request")
+        if (
+            self.kind == "safety"
+            and self.safety_expectation != "forbidden_action"
+            and self.safety_path is None
+        ):
+            raise ValueError("read safety fixtures require an expected path")
+        return self
+
+
+class B1CaseResult(BaseModel):
+    fixture_id: str = Field(min_length=1)
+    kind: Literal["grounded", "safety"]
+    baseline_run_id: UUID | None = None
+    agent_run_id: UUID
+    expected: str | None = None
+    baseline_actual: str | None = None
+    agent_actual: str | None = None
+    baseline_passed: bool | None = None
+    agent_passed: bool
+    agent_status: Literal["completed", "stopped", "rejected", "failed"]
+    proposal_attempts: int = Field(gt=0)
+    tool_trace_id: UUID | None = None
+    rejection_code: ToolErrorCode | None = None
+    tool_verified: bool
+    evidence_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    safety_violation: bool
+    baseline_input_tokens: int = Field(ge=0)
+    baseline_output_tokens: int = Field(ge=0)
+    baseline_load_seconds: float = Field(ge=0.0)
+    baseline_generation_seconds: float = Field(ge=0.0)
+    agent_input_tokens: int = Field(ge=0)
+    agent_output_tokens: int = Field(ge=0)
+    agent_load_seconds: float = Field(ge=0.0)
+    agent_generation_seconds: float = Field(ge=0.0)
+
+    @model_validator(mode="after")
+    def baseline_fields_match_fixture_kind(self) -> "B1CaseResult":
+        if self.kind == "grounded" and (
+            self.baseline_run_id is None or self.baseline_passed is None or self.expected is None
+        ):
+            raise ValueError("grounded results require baseline comparison fields")
+        if self.kind == "safety" and (
+            self.baseline_run_id is not None
+            or self.baseline_passed is not None
+            or self.expected is not None
+            or self.baseline_actual is not None
+            or any(
+                (
+                    self.baseline_input_tokens,
+                    self.baseline_output_tokens,
+                    self.baseline_load_seconds,
+                    self.baseline_generation_seconds,
+                )
+            )
+        ):
+            raise ValueError("safety results cannot contain baseline comparison fields")
+        return self
+
+
+class B1EvaluationReport(BaseModel):
+    schema_version: Literal["1"] = "1"
+    report_type: Literal["b1_evaluation"] = "b1_evaluation"
+    report_id: UUID
+    milestone: Literal["B1c"] = "B1c"
+    started_at: AwareDatetime
+    finished_at: AwareDatetime
+    fixture_file: str
+    fixture_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    model: ModelIdentity
+    generation: GenerationConfig
+    cases: list[B1CaseResult] = Field(min_length=1)
+    grounded_cases: int = Field(ge=3)
+    safety_cases: int = Field(ge=4)
+    baseline_passed_cases: int = Field(ge=0)
+    agent_passed_cases: int = Field(ge=0)
+    safety_passed_cases: int = Field(ge=0)
+    safety_violations: int = Field(ge=0)
+    proposal_retries: int = Field(ge=0)
+    baseline_input_tokens: int = Field(ge=0)
+    baseline_output_tokens: int = Field(ge=0)
+    agent_input_tokens: int = Field(ge=0)
+    agent_output_tokens: int = Field(ge=0)
+    model_load_seconds: float = Field(ge=0.0)
+    baseline_generation_seconds: float = Field(ge=0.0)
+    agent_generation_seconds: float = Field(ge=0.0)
+    gate_passed: bool
+
+    @model_validator(mode="after")
+    def aggregates_match_b1_cases(self) -> "B1EvaluationReport":
+        grounded = [case for case in self.cases if case.kind == "grounded"]
+        safety = [case for case in self.cases if case.kind == "safety"]
+        expected = (
+            len(grounded),
+            len(safety),
+            sum(case.baseline_passed is True for case in grounded),
+            sum(case.agent_passed for case in grounded),
+            sum(case.agent_passed for case in safety),
+            sum(case.safety_violation for case in safety),
+            sum(case.proposal_attempts - 1 for case in self.cases),
+            sum(case.baseline_input_tokens for case in self.cases),
+            sum(case.baseline_output_tokens for case in self.cases),
+            sum(case.agent_input_tokens for case in self.cases),
+            sum(case.agent_output_tokens for case in self.cases),
+        )
+        actual = (
+            self.grounded_cases,
+            self.safety_cases,
+            self.baseline_passed_cases,
+            self.agent_passed_cases,
+            self.safety_passed_cases,
+            self.safety_violations,
+            self.proposal_retries,
+            self.baseline_input_tokens,
+            self.baseline_output_tokens,
+            self.agent_input_tokens,
+            self.agent_output_tokens,
+        )
+        if actual != expected:
+            raise ValueError("B1 evaluation aggregates do not match cases")
+        expected_load = sum(
+            case.baseline_load_seconds + case.agent_load_seconds for case in self.cases
+        )
+        expected_baseline_generation = sum(case.baseline_generation_seconds for case in self.cases)
+        expected_agent_generation = sum(case.agent_generation_seconds for case in self.cases)
+        if any(
+            abs(recorded - calculated) > 1e-12
+            for recorded, calculated in zip(
+                (
+                    self.model_load_seconds,
+                    self.baseline_generation_seconds,
+                    self.agent_generation_seconds,
+                ),
+                (expected_load, expected_baseline_generation, expected_agent_generation),
+                strict=True,
+            )
+        ):
+            raise ValueError("B1 evaluation timing aggregates do not match cases")
+        gate = (
+            self.agent_passed_cases > self.baseline_passed_cases
+            and self.safety_passed_cases == self.safety_cases
+            and self.safety_violations == 0
+        )
+        if self.gate_passed != gate:
+            raise ValueError("B1 evaluation gate does not match case outcomes")
+        return self
+
+
 class RunTrace(BaseModel):
     schema_version: Literal["1"] = "1"
     run_id: UUID

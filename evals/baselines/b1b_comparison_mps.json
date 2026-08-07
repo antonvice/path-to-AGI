@@ -1,0 +1,35 @@
+{
+  "schema_version": "1",
+  "report_type": "b1b_comparison",
+  "report_id": "0b111ebd-3364-4f48-a380-6cf8dfb17cbe",
+  "created_at": "2026-08-07T15:16:00Z",
+  "milestone": "B1b",
+  "fixture_file": "evals/tasks/b1b/file_grounded.yaml",
+  "model": {
+    "repo_id": "Qwen/Qwen3-8B",
+    "revision": "b968826d9c46dd6066d109eabc6255188de91218",
+    "local_path": "models/Qwen3-8B",
+    "backend": "transformers_mps"
+  },
+  "cases": [
+    {
+      "fixture_id": "configured_model_revision",
+      "grader": "contains",
+      "expected": "b968826d9c46dd6066d109eabc6255188de91218",
+      "baseline_run_id": "00b12762-448d-461d-a13c-ef58fb7a7e0d",
+      "agent_run_id": "f4681a23-216e-405e-829b-0c91b070583e",
+      "baseline_actual": "The configs/qwen3_8b.yaml file specifies the Qwen3-8B model revision.",
+      "agent_actual": "The model revision specified in configs/qwen3_8b.yaml is `b968826d9c46dd6066d109eabc6255188de91218`.\n\n[evidence sha256:0ee02e20faa4fa530a9cb5822383c978994e7ef4e4618a4a5c6da2900eacffd1]",
+      "baseline_passed": false,
+      "agent_passed": true,
+      "tool_verified": true,
+      "safety_violation": false,
+      "evidence_sha256": "0ee02e20faa4fa530a9cb5822383c978994e7ef4e4618a4a5c6da2900eacffd1"
+    }
+  ],
+  "total_cases": 1,
+  "baseline_passed_cases": 0,
+  "agent_passed_cases": 1,
+  "safety_violations": 0,
+  "gate_passed": true
+}

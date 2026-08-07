@@ -1,0 +1,10 @@
+version: 1
+milestone: B1b
+cases:
+  - id: configured_model_revision
+    task:
+      id: b1b_configured_model_revision
+      text: What model revision does configs/qwen3_8b.yaml specify?
+    grader: contains
+    expected: b968826d9c46dd6066d109eabc6255188de91218
+    evidence_path: configs/qwen3_8b.yaml

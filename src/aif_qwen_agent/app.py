@@ -5,6 +5,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from aif_qwen_agent.agent import AgentTraceStore, OneStepAgent
 from aif_qwen_agent.aif_score import aif_score
 from aif_qwen_agent.artifacts import TraceStore
 from aif_qwen_agent.baseline import BaselineRunner
@@ -61,6 +62,41 @@ def _build_baseline_runner(config: Path, traces: Path) -> BaselineRunner:
     return BaselineRunner(adapter, model, generation, TraceStore(traces))
 
 
+def _build_agent_runner(
+    config: Path,
+    policy_config: Path,
+    traces: Path,
+    tool_traces: Path,
+) -> OneStepAgent:
+    settings = load_yaml(config)
+    policy_settings = load_yaml(policy_config)
+    model = ModelIdentity(
+        repo_id=settings["model"]["repo_id"],
+        revision=settings["model"]["revision"],
+        local_path=Path(settings["model"]["local_path"]),
+        backend=settings["inference"]["backend"],
+    )
+    generation = GenerationConfig.model_validate(settings["inference"])
+    adapter = TransformersAdapter(
+        model_path=model.local_path,
+        backend=model.backend,
+        dtype=settings["model"]["dtype"],
+        enable_thinking=generation.enable_thinking,
+    )
+    read_file = ReadFileTool(
+        ReadFilePolicy.model_validate(policy_settings["filesystem"]),
+        ReadFileTraceStore(tool_traces),
+    )
+    return OneStepAgent(
+        adapter,
+        model,
+        generation,
+        read_file,
+        AgentTraceStore(traces),
+        max_proposal_attempts=policy_settings["budgets"]["max_retries_per_action"] + 1,
+    )
+
+
 @app.command()
 def doctor(config: Path = Path("configs/qwen3_8b.yaml")) -> None:
     """Check configuration and local model availability."""
@@ -114,6 +150,32 @@ def run_baseline(
         f"output={trace.result.output_tokens} generation={trace.result.generation_seconds:.2f}s "
         f"trace={traces}[/dim]"
     )
+
+
+@app.command("agent")
+def run_agent(
+    text: str,
+    config: Path = Path("configs/qwen3_8b.yaml"),
+    policy: Path = Path("configs/policy.yaml"),
+    traces: Path = Path("artifacts/b1b/runs.jsonl"),
+    tool_traces: Path = Path("artifacts/b1b/read-file.jsonl"),
+) -> None:
+    """Run one B1b model-selected, read-only action and persist its trace."""
+    trace = _build_agent_runner(config, policy, traces, tool_traces).run(
+        Task(id=f"adhoc-{uuid4()}", text=text)
+    )
+    if trace.answer is not None:
+        console.print(_terminal_safe_text(trace.answer), markup=False)
+    console.print(
+        f"[dim]run={trace.run_id} status={trace.status} "
+        f"action={trace.selected_action.kind if trace.selected_action else 'none'} "
+        f"input={trace.input_tokens} output={trace.output_tokens} "
+        f"generation={trace.generation_seconds:.2f}s trace={traces}[/dim]"
+    )
+    if trace.status in {"rejected", "failed"}:
+        if trace.error is not None:
+            console.print(_terminal_safe_text(trace.error), style="red", markup=False)
+        raise typer.Exit(1)
 
 
 @app.command()

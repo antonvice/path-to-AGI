@@ -5,7 +5,7 @@ from statistics import median
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from pydantic import AwareDatetime, BaseModel, Field, model_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 
 UnitInterval = Annotated[float, Field(ge=0.0, le=1.0)]
 ToolPhase = Literal["authorization", "execution", "verification"]
@@ -90,6 +90,31 @@ class ReadFileTrace(BaseModel):
         return self
 
 
+class ReadFileAction(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["read_file"]
+    path: str = Field(min_length=1)
+    max_bytes: int = Field(default=16_384, gt=0)
+
+
+class AnswerAction(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["answer"]
+    answer: str = Field(min_length=1)
+
+
+class StopAction(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["stop"]
+    reason: str = Field(min_length=1)
+
+
+AgentAction = Annotated[ReadFileAction | AnswerAction | StopAction, Field(discriminator="kind")]
+
+
 class Task(BaseModel):
     id: str = Field(min_length=1)
     text: str = Field(min_length=1)
@@ -118,6 +143,159 @@ class ModelResult(BaseModel):
     generation_seconds: float = Field(ge=0.0)
     device: str
     stop_reason: Literal["eos", "max_tokens", "unknown"]
+
+
+class ProposalAttempt(BaseModel):
+    attempt: int = Field(gt=0)
+    rendered_prompt: str
+    prompt_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    result: ModelResult | None = None
+    action: AgentAction | None = None
+    error: str | None = None
+
+    @model_validator(mode="after")
+    def has_action_or_error(self) -> "ProposalAttempt":
+        if (self.action is None) == (self.error is None):
+            raise ValueError("proposal attempt requires exactly one action or error")
+        if self.action is not None and self.result is None:
+            raise ValueError("parsed proposal requires a model result")
+        return self
+
+
+class AgentTrace(BaseModel):
+    schema_version: Literal["1"] = "1"
+    run_id: UUID
+    started_at: AwareDatetime
+    finished_at: AwareDatetime
+    task: Task
+    model: ModelIdentity
+    generation: GenerationConfig
+    proposal_attempts: list[ProposalAttempt] = Field(min_length=1)
+    selected_action: AgentAction | None = None
+    tool_trace: ReadFileTrace | None = None
+    answer_result: ModelResult | None = None
+    evidence_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    answer: str | None = None
+    status: Literal["completed", "stopped", "rejected", "failed"]
+    error: str | None = None
+    input_tokens: int = Field(ge=0)
+    output_tokens: int = Field(ge=0)
+    model_load_seconds: float = Field(ge=0.0)
+    generation_seconds: float = Field(ge=0.0)
+
+    @model_validator(mode="after")
+    def consistent_agent_state(self) -> "AgentTrace":
+        if self.finished_at < self.started_at:
+            raise ValueError("finished_at cannot precede started_at")
+        results = [
+            attempt.result for attempt in self.proposal_attempts if attempt.result is not None
+        ]
+        if self.answer_result is not None:
+            results.append(self.answer_result)
+        totals = (
+            sum(result.input_tokens for result in results),
+            sum(result.output_tokens for result in results),
+            sum(result.load_seconds for result in results),
+            sum(result.generation_seconds for result in results),
+        )
+        recorded = (
+            self.input_tokens,
+            self.output_tokens,
+            self.model_load_seconds,
+            self.generation_seconds,
+        )
+        if any(
+            abs(actual - expected) > 1e-12
+            for actual, expected in zip(recorded, totals, strict=True)
+        ):
+            raise ValueError("agent model aggregates do not match model results")
+        if self.status == "completed":
+            if self.selected_action is None or self.answer is None or self.error is not None:
+                raise ValueError("completed agent traces require an action and answer")
+            if isinstance(self.selected_action, ReadFileAction):
+                if (
+                    self.tool_trace is None
+                    or self.tool_trace.observation is None
+                    or self.evidence_sha256 != self.tool_trace.observation.sha256
+                    or self.answer_result is None
+                    or f"[evidence sha256:{self.evidence_sha256}]" not in self.answer
+                ):
+                    raise ValueError("read-file answers require verified cited evidence")
+            elif self.tool_trace is not None or self.evidence_sha256 is not None:
+                raise ValueError("direct answers cannot claim tool evidence")
+        elif self.status == "stopped":
+            if not isinstance(self.selected_action, StopAction) or self.error is not None:
+                raise ValueError("stopped traces require a stop action")
+        elif self.status == "rejected":
+            if (
+                not isinstance(self.selected_action, ReadFileAction)
+                or self.tool_trace is None
+                or self.tool_trace.status != "rejected"
+                or self.error is None
+            ):
+                raise ValueError("rejected traces require a rejected read-file trace")
+        elif self.error is None:
+            raise ValueError("failed agent traces require an error")
+        return self
+
+
+class AgentComparisonCase(BaseModel):
+    fixture_id: str = Field(min_length=1)
+    grader: Literal["exact", "contains"]
+    expected: str = Field(min_length=1)
+    baseline_run_id: UUID
+    agent_run_id: UUID
+    baseline_actual: str
+    agent_actual: str
+    baseline_passed: bool
+    agent_passed: bool
+    tool_verified: bool
+    safety_violation: bool = False
+    evidence_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+    @model_validator(mode="after")
+    def grades_match_outputs(self) -> "AgentComparisonCase":
+        def grade(actual: str) -> bool:
+            return actual == self.expected if self.grader == "exact" else self.expected in actual
+
+        if self.baseline_passed != grade(self.baseline_actual):
+            raise ValueError("baseline grade does not match output")
+        if self.agent_passed != grade(self.agent_actual):
+            raise ValueError("agent grade does not match output")
+        return self
+
+
+class AgentComparisonReport(BaseModel):
+    schema_version: Literal["1"] = "1"
+    report_type: Literal["b1b_comparison"] = "b1b_comparison"
+    report_id: UUID
+    created_at: AwareDatetime
+    milestone: Literal["B1b"] = "B1b"
+    fixture_file: str
+    model: ModelIdentity
+    cases: list[AgentComparisonCase] = Field(min_length=1)
+    total_cases: int = Field(gt=0)
+    baseline_passed_cases: int = Field(ge=0)
+    agent_passed_cases: int = Field(ge=0)
+    safety_violations: int = Field(ge=0)
+    gate_passed: bool
+
+    @model_validator(mode="after")
+    def aggregates_match_comparison_cases(self) -> "AgentComparisonReport":
+        baseline_passed = sum(case.baseline_passed for case in self.cases)
+        agent_passed = sum(case.agent_passed for case in self.cases)
+        safety_violations = sum(case.safety_violation for case in self.cases)
+        if self.total_cases != len(self.cases):
+            raise ValueError("comparison total does not match cases")
+        if (self.baseline_passed_cases, self.agent_passed_cases, self.safety_violations) != (
+            baseline_passed,
+            agent_passed,
+            safety_violations,
+        ):
+            raise ValueError("comparison aggregates do not match cases")
+        if self.gate_passed != (agent_passed > baseline_passed and safety_violations == 0):
+            raise ValueError("comparison gate does not match outcomes")
+        return self
 
 
 class RunTrace(BaseModel):

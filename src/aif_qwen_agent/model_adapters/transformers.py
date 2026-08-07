@@ -1,7 +1,9 @@
+from collections.abc import Sequence
 from pathlib import Path
 from time import perf_counter
 from typing import Any
 
+from aif_qwen_agent.model_adapters.base import ChatMessage
 from aif_qwen_agent.schemas import GenerationConfig, ModelResult, Task
 
 SYSTEM_PROMPT = (
@@ -32,12 +34,17 @@ class TransformersAdapter:
         self._load_reported = False
 
     def render_prompt(self, task: Task) -> str:
-        self._load_tokenizer()
-        prompt = self._tokenizer.apply_chat_template(
+        return self.render_messages(
             [
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": task.text},
-            ],
+            ]
+        )
+
+    def render_messages(self, messages: Sequence[ChatMessage]) -> str:
+        self._load_tokenizer()
+        prompt = self._tokenizer.apply_chat_template(
+            messages,
             tokenize=False,
             add_generation_prompt=True,
             enable_thinking=self.enable_thinking,

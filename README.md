@@ -30,6 +30,8 @@ Working now:
 - Offline `regrade-b0` verification with fixture hashes and tamper detection.
 - B1a typed `read_file` gateway with root containment, symlink-escape rejection, byte budgets,
   UTF-8 validation, content hashing, independent verification, and durable traces.
+- B1b one-step agent with strict `read_file`, `answer`, and `stop` actions, bounded proposal
+  retries, policy-gated execution, evidence-cited answers, and replayable comparison traces.
 - Typed schemas for beliefs, actions, predicted outcomes, truth bounds, and logical facts.
 - Transparent MVP active-inference score with separately logged terms.
 - Hard policy and logical filtering before action scoring.
@@ -43,7 +45,7 @@ Not implemented yet:
 - Independent-process cold-start benchmarking.
 - Sandboxed Python and test execution tools.
 - SQLite run, artifact, evaluation, and memory storage.
-- Frozen B0/B1 benchmark reports.
+- Multi-case held-out B1 benchmark and promotion reports.
 - Durable belief updates or semantic memory.
 - Calibrated world-model prediction.
 
@@ -185,6 +187,13 @@ Read a workspace file through the B1a policy gateway:
 uv run aif-qwen-agent tool read-file README.md
 ```
 
+Run one model-selected B1b action:
+
+```bash
+uv run aif-qwen-agent agent \
+  "What model revision does configs/qwen3_8b.yaml specify?"
+```
+
 ## Repository map
 
 | Path | Purpose |
@@ -194,6 +203,7 @@ uv run aif-qwen-agent tool read-file README.md
 | `configs/logic.yaml` | Active logic backend and bounded inference settings |
 | `configs/evaluation.yaml` | Dataset splits and promotion gates |
 | `src/aif_qwen_agent/schemas.py` | Typed beliefs, actions, predictions, and logical facts |
+| `src/aif_qwen_agent/agent.py` | Bounded one-step proposal, tool, answer, and trace lifecycle |
 | `src/aif_qwen_agent/controller.py` | Hard filtering and lowest-score action selection |
 | `src/aif_qwen_agent/aif_score.py` | Transparent MVP active-inference approximation |
 | `src/aif_qwen_agent/logic_backends/` | Logic protocol and Python-predicate baseline |
@@ -286,43 +296,69 @@ This is a local research-harness boundary, not an operating-system security sand
 against the tested path and content hazards but does not claim resistance to a malicious local
 process racing filesystem mutations.
 
+## B1b one-step agent result
+
+The first equal-model B0/B1b comparison completed on 2026-08-07:
+
+| Metric | B0 answer-only | B1b one-step agent |
+|---|---:|---:|
+| File-grounded cases passed | 0/1 | 1/1 |
+| Exact configured revision returned | No | Yes |
+| Verified tool observation | None | SHA-256 `0ee02e…ffd1` |
+| Input/output tokens | 63/22 | 387/80 |
+| Generation time | 10.83 seconds | 41.30 seconds |
+| Safety violations | 0 | 0 |
+
+Qwen selected one schema-valid `read_file` action on its first attempt, the gateway authorized and
+verified the 273-byte configuration observation, and the final answer cited its content hash. The
+typed agent trace is in `evals/baselines/b1b_agent_mps.jsonl`; the matching B0 trace and comparison
+report are in `evals/baselines/b1b_b0_mps.jsonl` and
+`evals/baselines/b1b_comparison_mps.json`.
+
+This establishes the complete B1b path and improvement on one frozen engineering fixture. It is
+not a statistically meaningful benchmark or a B1 promotion claim. B1b remains one-step and
+read-only; malformed action kinds, traversal, Python, shell, network, and writes cannot execute.
+
 ## What can be completed in the next hour
 
-The next useful one-hour deliverable is B1b: one model-selected, read-only tool step.
+The next useful one-hour deliverable is B1c: a one-load, multi-case B0/B1 evaluator.
 
 Target command:
 
 ```bash
-uv run aif-qwen-agent agent "What model revision does configs/qwen3_8b.yaml specify?"
+uv run aif-qwen-agent eval-b1
 ```
 
 It should:
 
-- Ask Qwen for one schema-valid `read_file`, `answer`, or `stop` action.
-- Apply hard policy filtering before executing a proposed read.
-- Feed the verified observation back to Qwen for the final answer.
-- Record proposal, authorization, tool trace, evidence hash, answer, tokens, and latency.
-- Compare file-dependent tasks against the answer-only B0 baseline.
+- Run B0 and B1b against the same versioned file-grounded fixtures with one loaded model.
+- Include successful reads plus forbidden action, traversal, missing-file, and oversize cases.
+- Grade outputs deterministically and count tool verification and safety violations separately.
+- Report pass-rate delta, tokens, model load, generation latency, and proposal retries.
+- Regrade from saved traces without loading the model.
 
 Realistic 60-minute scope:
 
-1. Minutes 0-15: add structured one-step proposal and agent-trace schemas.
-2. Minutes 15-30: add schema-constrained proposal parsing with bounded retries.
-3. Minutes 30-40: connect eligible `read_file` actions to the verified gateway.
-4. Minutes 40-50: add evidence-grounded final-answer generation and fake-adapter tests.
-5. Minutes 50-60: run file-dependent fixtures against B0 and freeze the first B1b traces.
+1. Minutes 0-15: expand the frozen fixture schema and add deterministic graders.
+2. Minutes 15-30: implement a shared-adapter B0/B1b suite runner.
+3. Minutes 30-40: aggregate quality, safety, retry, token, and latency metrics.
+4. Minutes 40-50: add offline report and trace verification with tamper tests.
+5. Minutes 50-60: run the local suite once and freeze the first multi-case report.
 
 Definition of done for the hour:
 
-- Invalid or forbidden proposals never execute.
-- Every factual answer cites a verified tool observation hash.
-- File-dependent success improves over B0 on the frozen fixtures.
+- At least three file-grounded positive cases and four safety cases are versioned.
+- B0 and B1b use the same model revision and generation settings.
+- Invalid or forbidden proposals produce zero unauthorized executions.
+- Every successful file-grounded answer links to a verified observation hash.
+- The report can be reconstructed and regraded from immutable traces.
 - Tests, Ruff, and strict mypy remain green.
-- B1b remains one-step and read-only; Python, tests, shell, network, and writes stay unavailable.
+- The agent remains one-step and read-only; Python, tests, shell, network, and writes stay
+  unavailable.
 
 Explicitly out of scope for that hour:
 
-- Multi-step tool execution.
+- Multi-step tool execution or recovery.
 - SQLite memory.
 - A multi-step controller loop.
 - LNN installation.

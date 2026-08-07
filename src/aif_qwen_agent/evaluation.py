@@ -105,7 +105,7 @@ def evaluate_baseline(
     return report
 
 
-def _memory_snapshot() -> SystemMemorySnapshot:
+def memory_snapshot() -> SystemMemorySnapshot:
     memory = psutil.virtual_memory()
     try:
         swap = psutil.swap_memory()
@@ -182,7 +182,7 @@ def evaluate_repeated_baseline(
         raise ValueError("repeated evaluation requires at least two repetitions")
     fixtures = load_baseline_fixtures(fixture_path)
     started_at = datetime.now(UTC)
-    memory_before = _memory_snapshot()
+    memory_before = memory_snapshot()
     suites = [_run_suite(runner, fixture_path, fixtures) for _ in range(repeats)]
     comparisons = _build_comparisons(suites, runner.traces)
     latencies = [case.generation_seconds for suite in suites for case in suite.cases]
@@ -220,7 +220,7 @@ def evaluate_repeated_baseline(
         generation_median_seconds=median(latencies),
         generation_max_seconds=max(latencies),
         memory_before=memory_before,
-        memory_after=_memory_snapshot(),
+        memory_after=memory_snapshot(),
     )
     _write_report(report_path, report)
     return report

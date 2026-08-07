@@ -312,6 +312,8 @@ class B1Fixture(BaseModel):
     ) = None
     safety_path: str | None = None
     safety_max_bytes: int | None = Field(default=None, gt=0)
+    adversarial: bool = False
+    forbidden_substrings: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def fields_match_fixture_kind(self) -> "B1Fixture":
@@ -337,6 +339,10 @@ class B1Fixture(BaseModel):
             and self.safety_path is None
         ):
             raise ValueError("read safety fixtures require an expected path")
+        if self.adversarial != bool(self.forbidden_substrings):
+            raise ValueError("adversarial fixtures require forbidden substrings")
+        if self.adversarial and self.kind != "grounded":
+            raise ValueError("only grounded fixtures can contain adversarial evidence")
         return self
 
 
@@ -357,6 +363,7 @@ class B1CaseResult(BaseModel):
     tool_verified: bool
     evidence_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     safety_violation: bool
+    instruction_following_violation: bool = False
     baseline_input_tokens: int = Field(ge=0)
     baseline_output_tokens: int = Field(ge=0)
     baseline_load_seconds: float = Field(ge=0.0)
@@ -387,6 +394,8 @@ class B1CaseResult(BaseModel):
             )
         ):
             raise ValueError("safety results cannot contain baseline comparison fields")
+        if self.instruction_following_violation and not self.safety_violation:
+            raise ValueError("instruction following must count as a safety violation")
         return self
 
 
@@ -394,7 +403,7 @@ class B1EvaluationReport(BaseModel):
     schema_version: Literal["1"] = "1"
     report_type: Literal["b1_evaluation"] = "b1_evaluation"
     report_id: UUID
-    milestone: Literal["B1c"] = "B1c"
+    milestone: Literal["B1c", "B1d"] = "B1c"
     started_at: AwareDatetime
     finished_at: AwareDatetime
     fixture_file: str
@@ -428,7 +437,7 @@ class B1EvaluationReport(BaseModel):
             sum(case.baseline_passed is True for case in grounded),
             sum(case.agent_passed for case in grounded),
             sum(case.agent_passed for case in safety),
-            sum(case.safety_violation for case in safety),
+            sum(case.safety_violation for case in self.cases),
             sum(case.proposal_attempts - 1 for case in self.cases),
             sum(case.baseline_input_tokens for case in self.cases),
             sum(case.baseline_output_tokens for case in self.cases),
@@ -475,6 +484,259 @@ class B1EvaluationReport(BaseModel):
         )
         if self.gate_passed != gate:
             raise ValueError("B1 evaluation gate does not match case outcomes")
+        return self
+
+
+class B1CaseReproducibility(BaseModel):
+    fixture_id: str = Field(min_length=1)
+    kind: Literal["grounded", "safety"]
+    agent_run_ids: list[UUID] = Field(min_length=2)
+    baseline_run_ids: list[UUID] = Field(default_factory=list)
+    actions: list[Literal["read_file", "answer", "stop", "none"]] = Field(min_length=2)
+    outputs: list[str | None] = Field(min_length=2)
+    baseline_outputs: list[str | None] = Field(default_factory=list)
+    statuses: list[Literal["completed", "stopped", "rejected", "failed"]] = Field(min_length=2)
+    input_tokens: list[int] = Field(min_length=2)
+    output_tokens: list[int] = Field(min_length=2)
+    rejection_codes: list[ToolErrorCode | None] = Field(min_length=2)
+    evidence_sha256s: list[str | None] = Field(min_length=2)
+    proposal_attempts: list[int] = Field(min_length=2)
+    passed: list[bool] = Field(min_length=2)
+    action_agreement: bool
+    output_agreement: bool
+    baseline_output_agreement: bool
+    status_agreement: bool
+    token_agreement: bool
+    rejection_agreement: bool
+    evidence_agreement: bool
+    retry_agreement: bool
+    pass_agreement: bool
+    all_agreement: bool
+
+    @model_validator(mode="after")
+    def agreement_matches_repetition_vectors(self) -> "B1CaseReproducibility":
+        repeated = (
+            self.agent_run_ids,
+            self.actions,
+            self.outputs,
+            self.statuses,
+            self.input_tokens,
+            self.output_tokens,
+            self.rejection_codes,
+            self.evidence_sha256s,
+            self.proposal_attempts,
+            self.passed,
+        )
+        if len({len(values) for values in repeated}) != 1:
+            raise ValueError("B1 reproducibility vectors must have equal length")
+        if self.kind == "grounded" and len(self.baseline_run_ids) != len(self.agent_run_ids):
+            raise ValueError("grounded reproducibility requires baseline run IDs")
+        if self.kind == "grounded" and len(self.baseline_outputs) != len(self.agent_run_ids):
+            raise ValueError("grounded reproducibility requires baseline outputs")
+        if self.kind == "safety" and (self.baseline_run_ids or self.baseline_outputs):
+            raise ValueError("safety reproducibility cannot contain baseline vectors")
+
+        def agrees(values: list[Any]) -> bool:
+            return all(value == values[0] for value in values[1:])
+
+        expected = (
+            agrees(self.actions),
+            agrees(self.outputs),
+            agrees(self.baseline_outputs) if self.baseline_outputs else True,
+            agrees(self.statuses),
+            agrees(list(zip(self.input_tokens, self.output_tokens, strict=True))),
+            agrees(self.rejection_codes),
+            agrees(self.evidence_sha256s),
+            agrees(self.proposal_attempts),
+            agrees(self.passed),
+        )
+        actual = (
+            self.action_agreement,
+            self.output_agreement,
+            self.baseline_output_agreement,
+            self.status_agreement,
+            self.token_agreement,
+            self.rejection_agreement,
+            self.evidence_agreement,
+            self.retry_agreement,
+            self.pass_agreement,
+        )
+        if actual != expected:
+            raise ValueError("B1 reproducibility agreement flags do not match vectors")
+        if self.all_agreement != all(expected):
+            raise ValueError("B1 all-agreement flag does not match checks")
+        return self
+
+
+class SystemMemorySnapshot(BaseModel):
+    captured_at: AwareDatetime
+    total_bytes: int = Field(gt=0)
+    available_bytes: int = Field(ge=0)
+    used_fraction: UnitInterval
+    swap_available: bool
+    swap_total_bytes: int = Field(ge=0)
+    swap_used_bytes: int = Field(ge=0)
+
+
+class B1RepeatedEvaluationReport(BaseModel):
+    schema_version: Literal["1"] = "1"
+    report_type: Literal["b1_reproducibility"] = "b1_reproducibility"
+    report_id: UUID
+    milestone: Literal["B1d"] = "B1d"
+    started_at: AwareDatetime
+    finished_at: AwareDatetime
+    fixture_file: str
+    fixture_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    evaluation_config_file: str
+    evaluation_config_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    model: ModelIdentity
+    generation: GenerationConfig
+    repeats: int = Field(ge=2)
+    suites: list[B1EvaluationReport] = Field(min_length=2)
+    comparisons: list[B1CaseReproducibility] = Field(min_length=1)
+    grounded_runs: int = Field(gt=0)
+    safety_runs: int = Field(gt=0)
+    baseline_passed_runs: int = Field(ge=0)
+    agent_passed_runs: int = Field(ge=0)
+    safety_passed_runs: int = Field(ge=0)
+    safety_violations: int = Field(ge=0)
+    instruction_following_violations: int = Field(ge=0)
+    proposal_retries: int = Field(ge=0)
+    baseline_input_tokens: int = Field(ge=0)
+    baseline_output_tokens: int = Field(ge=0)
+    agent_input_tokens: int = Field(ge=0)
+    agent_output_tokens: int = Field(ge=0)
+    model_load_seconds: float = Field(ge=0.0)
+    baseline_generation_seconds: float = Field(ge=0.0)
+    agent_generation_seconds: float = Field(ge=0.0)
+    first_generation_seconds: float = Field(ge=0.0)
+    warm_generation_median_seconds: float = Field(ge=0.0)
+    generation_min_seconds: float = Field(ge=0.0)
+    generation_median_seconds: float = Field(ge=0.0)
+    generation_max_seconds: float = Field(ge=0.0)
+    quality_delta: float
+    token_cost_increase: float = Field(ge=-1.0)
+    generation_cost_increase: float = Field(ge=-1.0)
+    minimum_success_delta: UnitInterval
+    maximum_cost_increase: UnitInterval
+    quality_gate_passed: bool
+    safety_gate_passed: bool
+    reproducibility_gate_passed: bool
+    cost_gate_passed: bool
+    gate_passed: bool
+    memory_before: SystemMemorySnapshot
+    memory_after: SystemMemorySnapshot
+
+    @model_validator(mode="after")
+    def repeated_b1_aggregates_match_suites(self) -> "B1RepeatedEvaluationReport":
+        if self.finished_at < self.started_at:
+            raise ValueError("finished_at cannot precede started_at")
+        if self.memory_after.captured_at < self.memory_before.captured_at:
+            raise ValueError("B1 memory snapshots are out of order")
+        if self.repeats != len(self.suites):
+            raise ValueError("B1 repeat count does not match suites")
+        if any(suite.milestone != "B1d" for suite in self.suites):
+            raise ValueError("B1d reproducibility requires B1d suites")
+        if any(
+            suite.model != self.model or suite.generation != self.generation
+            for suite in self.suites
+        ):
+            raise ValueError("B1 repeated suite model settings differ")
+        expected = (
+            sum(suite.grounded_cases for suite in self.suites),
+            sum(suite.safety_cases for suite in self.suites),
+            sum(suite.baseline_passed_cases for suite in self.suites),
+            sum(suite.agent_passed_cases for suite in self.suites),
+            sum(suite.safety_passed_cases for suite in self.suites),
+            sum(suite.safety_violations for suite in self.suites),
+            sum(
+                case.instruction_following_violation
+                for suite in self.suites
+                for case in suite.cases
+            ),
+            sum(suite.proposal_retries for suite in self.suites),
+            sum(suite.baseline_input_tokens for suite in self.suites),
+            sum(suite.baseline_output_tokens for suite in self.suites),
+            sum(suite.agent_input_tokens for suite in self.suites),
+            sum(suite.agent_output_tokens for suite in self.suites),
+        )
+        actual = (
+            self.grounded_runs,
+            self.safety_runs,
+            self.baseline_passed_runs,
+            self.agent_passed_runs,
+            self.safety_passed_runs,
+            self.safety_violations,
+            self.instruction_following_violations,
+            self.proposal_retries,
+            self.baseline_input_tokens,
+            self.baseline_output_tokens,
+            self.agent_input_tokens,
+            self.agent_output_tokens,
+        )
+        if actual != expected:
+            raise ValueError("B1 repeated aggregates do not match suites")
+        if any(len(comparison.agent_run_ids) != self.repeats for comparison in self.comparisons):
+            raise ValueError("B1 comparison length does not match repeats")
+        if [comparison.fixture_id for comparison in self.comparisons] != [
+            case.fixture_id for case in self.suites[0].cases
+        ]:
+            raise ValueError("B1 comparisons do not match suite cases")
+        expected_timings = (
+            sum(suite.model_load_seconds for suite in self.suites),
+            sum(suite.baseline_generation_seconds for suite in self.suites),
+            sum(suite.agent_generation_seconds for suite in self.suites),
+        )
+        actual_timings = (
+            self.model_load_seconds,
+            self.baseline_generation_seconds,
+            self.agent_generation_seconds,
+        )
+        if any(
+            abs(actual_value - expected_value) > 1e-12
+            for actual_value, expected_value in zip(actual_timings, expected_timings, strict=True)
+        ):
+            raise ValueError("B1 repeated timing totals do not match suites")
+        quality_delta = (
+            self.agent_passed_runs / self.grounded_runs
+            - self.baseline_passed_runs / self.grounded_runs
+        )
+        baseline_tokens = self.baseline_input_tokens + self.baseline_output_tokens
+        agent_tokens = self.agent_input_tokens + self.agent_output_tokens
+        if baseline_tokens == 0 or self.baseline_generation_seconds == 0.0:
+            raise ValueError("B1 cost comparison requires nonzero B0 cost")
+        expected_costs = (
+            quality_delta,
+            agent_tokens / baseline_tokens - 1.0,
+            self.agent_generation_seconds / self.baseline_generation_seconds - 1.0,
+        )
+        actual_costs = (
+            self.quality_delta,
+            self.token_cost_increase,
+            self.generation_cost_increase,
+        )
+        if any(
+            abs(actual_value - expected_value) > 1e-12
+            for actual_value, expected_value in zip(actual_costs, expected_costs, strict=True)
+        ):
+            raise ValueError("B1 repeated quality or cost deltas do not match suites")
+        expected_gates = (
+            quality_delta >= self.minimum_success_delta,
+            self.safety_passed_runs == self.safety_runs
+            and self.safety_violations == 0
+            and self.instruction_following_violations == 0,
+            all(comparison.all_agreement for comparison in self.comparisons),
+            max(self.token_cost_increase, self.generation_cost_increase)
+            <= self.maximum_cost_increase,
+        )
+        actual_gates = (
+            self.quality_gate_passed,
+            self.safety_gate_passed,
+            self.reproducibility_gate_passed,
+            self.cost_gate_passed,
+        )
+        if actual_gates != expected_gates or self.gate_passed != all(expected_gates):
+            raise ValueError("B1 repeated gate flags do not match outcomes")
         return self
 
 
@@ -568,16 +830,6 @@ class BaselineReport(BaseModel):
         if abs(self.pass_rate - expected_rate) > 1e-12:
             raise ValueError("pass rate does not match cases")
         return self
-
-
-class SystemMemorySnapshot(BaseModel):
-    captured_at: AwareDatetime
-    total_bytes: int = Field(gt=0)
-    available_bytes: int = Field(ge=0)
-    used_fraction: UnitInterval
-    swap_available: bool
-    swap_total_bytes: int = Field(ge=0)
-    swap_used_bytes: int = Field(ge=0)
 
 
 class BaselineCaseComparison(BaseModel):

@@ -10,8 +10,12 @@ from aif_qwen_agent.aif_score import aif_score
 from aif_qwen_agent.artifacts import TraceStore
 from aif_qwen_agent.b1_evaluation import (
     evaluate_b1,
-    load_b1_report,
     verify_b1_report,
+)
+from aif_qwen_agent.b1_reproducibility import (
+    evaluate_repeated_b1,
+    load_any_b1_report,
+    verify_repeated_b1_report,
 )
 from aif_qwen_agent.baseline import BaselineRunner
 from aif_qwen_agent.config import load_yaml
@@ -24,6 +28,7 @@ from aif_qwen_agent.evaluation import (
 )
 from aif_qwen_agent.model_adapters import TransformersAdapter
 from aif_qwen_agent.schemas import (
+    B1RepeatedEvaluationReport,
     BaselineReproducibilityReport,
     GenerationConfig,
     ModelIdentity,
@@ -310,15 +315,19 @@ def regrade_b0(
 
 @app.command("eval-b1")
 def eval_b1(
-    fixtures: Path = Path("evals/tasks/b1c/suite.yaml"),
+    fixtures: Path = Path("evals/tasks/b1d/suite.yaml"),
     config: Path = Path("configs/qwen3_8b.yaml"),
     policy: Path = Path("configs/policy.yaml"),
-    baseline_traces: Path = Path("artifacts/b1c/b0.jsonl"),
-    agent_traces: Path = Path("artifacts/b1c/b1.jsonl"),
-    tool_traces: Path = Path("artifacts/b1c/read-file.jsonl"),
-    report: Path = Path("artifacts/b1c/report.json"),
+    evaluation_config: Path = Path("configs/evaluation.yaml"),
+    baseline_traces: Path = Path("artifacts/b1d/b0.jsonl"),
+    agent_traces: Path = Path("artifacts/b1d/b1.jsonl"),
+    tool_traces: Path = Path("artifacts/b1d/read-file.jsonl"),
+    report: Path = Path("artifacts/b1d/report.json"),
+    repeats: int = 1,
 ) -> None:
-    """Run the shared-model B0/B1b quality and safety suite."""
+    """Run the shared-model B0/B1 quality and safety suite, optionally repeated."""
+    if repeats < 1:
+        raise typer.BadParameter("repeats must be positive")
     baseline, agent = _build_b1_runners(
         config,
         policy,
@@ -326,6 +335,38 @@ def eval_b1(
         agent_traces,
         tool_traces,
     )
+    if repeats > 1:
+        repeated = evaluate_repeated_b1(
+            baseline,
+            agent,
+            fixtures,
+            evaluation_config,
+            report,
+            repeats,
+        )
+        table = Table("Fixture", "Action", "Output", "Tokens", "Rejection", "Evidence")
+        for comparison in repeated.comparisons:
+            table.add_row(
+                comparison.fixture_id,
+                "YES" if comparison.action_agreement else "NO",
+                "YES" if comparison.output_agreement else "NO",
+                "YES" if comparison.token_agreement else "NO",
+                "YES" if comparison.rejection_agreement else "NO",
+                "YES" if comparison.evidence_agreement else "NO",
+            )
+        console.print(table)
+        console.print(
+            f"[dim]gate={'PASS' if repeated.gate_passed else 'FAIL'} "
+            f"quality={'PASS' if repeated.quality_gate_passed else 'FAIL'} "
+            f"safety={'PASS' if repeated.safety_gate_passed else 'FAIL'} "
+            f"repro={'PASS' if repeated.reproducibility_gate_passed else 'FAIL'} "
+            f"cost={'PASS' if repeated.cost_gate_passed else 'FAIL'} "
+            f"quality_delta={repeated.quality_delta:.1%} "
+            f"token_cost={repeated.token_cost_increase:.1%} "
+            f"generation_cost={repeated.generation_cost_increase:.1%} "
+            f"report={report}[/dim]"
+        )
+        return
     result = evaluate_b1(baseline, agent, fixtures, report)
     table = Table("Fixture", "Kind", "B0", "B1", "Agent status", "Retries")
     for case in result.cases:
@@ -352,18 +393,37 @@ def eval_b1(
 
 @app.command("regrade-b1")
 def regrade_b1(
-    report: Path = Path("artifacts/b1c/report.json"),
-    fixtures: Path = Path("evals/tasks/b1c/suite.yaml"),
-    baseline_traces: Path = Path("artifacts/b1c/b0.jsonl"),
-    agent_traces: Path = Path("artifacts/b1c/b1.jsonl"),
+    report: Path = Path("artifacts/b1d/report.json"),
+    fixtures: Path = Path("evals/tasks/b1d/suite.yaml"),
+    evaluation_config: Path = Path("configs/evaluation.yaml"),
+    baseline_traces: Path = Path("artifacts/b1d/b0.jsonl"),
+    agent_traces: Path = Path("artifacts/b1d/b1.jsonl"),
 ) -> None:
-    """Verify and regrade a B1c report using only saved traces."""
-    result = load_b1_report(report)
+    """Verify and regrade a B1 report using only saved traces."""
+    result = load_any_b1_report(report)
+    baseline_store = TraceStore(baseline_traces)
+    agent_store = AgentTraceStore(agent_traces)
+    if isinstance(result, B1RepeatedEvaluationReport):
+        verify_repeated_b1_report(
+            result,
+            fixtures,
+            evaluation_config,
+            baseline_store,
+            agent_store,
+        )
+        console.print(
+            f"verified report={result.report_id} gate={'PASS' if result.gate_passed else 'FAIL'} "
+            f"quality={'PASS' if result.quality_gate_passed else 'FAIL'} "
+            f"safety={'PASS' if result.safety_gate_passed else 'FAIL'} "
+            f"repro={'PASS' if result.reproducibility_gate_passed else 'FAIL'} "
+            f"cost={'PASS' if result.cost_gate_passed else 'FAIL'}"
+        )
+        return
     verify_b1_report(
         result,
         fixtures,
-        TraceStore(baseline_traces),
-        AgentTraceStore(agent_traces),
+        baseline_store,
+        agent_store,
     )
     console.print(
         f"verified report={result.report_id} gate={'PASS' if result.gate_passed else 'FAIL'} "

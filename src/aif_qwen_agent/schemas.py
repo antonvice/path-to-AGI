@@ -7,6 +7,8 @@ from uuid import UUID
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 
+from aif_qwen_agent.evidence import project_evidence
+
 UnitInterval = Annotated[float, Field(ge=0.0, le=1.0)]
 ToolPhase = Literal["authorization", "execution", "verification"]
 
@@ -171,12 +173,15 @@ class AgentTrace(BaseModel):
     model: ModelIdentity
     generation: GenerationConfig
     proposal_generation: GenerationConfig | None = None
-    prompt_profile: Literal["legacy", "compact"] | None = None
-    proposal_attempts: list[ProposalAttempt] = Field(min_length=1)
+    prompt_profile: Literal["legacy", "compact", "fast"] | None = None
+    proposal_attempts: list[ProposalAttempt] = Field(default_factory=list)
     selected_action: AgentAction | None = None
+    action_source: Literal["model", "explicit_path"] = "model"
     tool_trace: ReadFileTrace | None = None
     answer_result: ModelResult | None = None
     evidence_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    evidence_excerpt: str | None = None
+    evidence_projection: Literal["lexical_v1"] | None = None
     answer: str | None = None
     status: Literal["completed", "stopped", "rejected", "failed"]
     error: str | None = None
@@ -189,6 +194,14 @@ class AgentTrace(BaseModel):
     def consistent_agent_state(self) -> "AgentTrace":
         if self.finished_at < self.started_at:
             raise ValueError("finished_at cannot precede started_at")
+        if self.action_source == "model" and not self.proposal_attempts:
+            raise ValueError("model-selected actions require proposal attempts")
+        if self.action_source == "explicit_path" and (
+            self.prompt_profile != "fast"
+            or self.proposal_attempts
+            or not isinstance(self.selected_action, ReadFileAction)
+        ):
+            raise ValueError("explicit-path actions require a proposal-free fast read")
         results = [
             attempt.result for attempt in self.proposal_attempts if attempt.result is not None
         ]
@@ -211,6 +224,17 @@ class AgentTrace(BaseModel):
             for actual, expected in zip(recorded, totals, strict=True)
         ):
             raise ValueError("agent model aggregates do not match model results")
+        has_projection = self.evidence_excerpt is not None or self.evidence_projection is not None
+        if has_projection:
+            observation = self.tool_trace.observation if self.tool_trace is not None else None
+            if (
+                self.prompt_profile != "fast"
+                or self.evidence_projection != "lexical_v1"
+                or self.evidence_excerpt is None
+                or observation is None
+                or self.evidence_excerpt != project_evidence(self.task.text, observation.content)
+            ):
+                raise ValueError("evidence projection does not match verified content")
         if self.status == "completed":
             if self.selected_action is None or self.answer is None or self.error is not None:
                 raise ValueError("completed agent traces require an action and answer")
@@ -223,6 +247,8 @@ class AgentTrace(BaseModel):
                     or f"[evidence sha256:{self.evidence_sha256}]" not in self.answer
                 ):
                     raise ValueError("read-file answers require verified cited evidence")
+                if self.prompt_profile == "fast" and not has_projection:
+                    raise ValueError("fast read-file answers require projected evidence")
             elif self.tool_trace is not None or self.evidence_sha256 is not None:
                 raise ValueError("direct answers cannot claim tool evidence")
         elif self.status == "stopped":
@@ -359,7 +385,7 @@ class B1CaseResult(BaseModel):
     baseline_passed: bool | None = None
     agent_passed: bool
     agent_status: Literal["completed", "stopped", "rejected", "failed"]
-    proposal_attempts: int = Field(gt=0)
+    proposal_attempts: int = Field(ge=0)
     tool_trace_id: UUID | None = None
     rejection_code: ToolErrorCode | None = None
     tool_verified: bool
@@ -440,7 +466,7 @@ class B1EvaluationReport(BaseModel):
             sum(case.agent_passed for case in grounded),
             sum(case.agent_passed for case in safety),
             sum(case.safety_violation for case in self.cases),
-            sum(case.proposal_attempts - 1 for case in self.cases),
+            sum(max(case.proposal_attempts - 1, 0) for case in self.cases),
             sum(case.baseline_input_tokens for case in self.cases),
             sum(case.baseline_output_tokens for case in self.cases),
             sum(case.agent_input_tokens for case in self.cases),
@@ -753,7 +779,7 @@ class B1CostReport(BaseModel):
     schema_version: Literal["1"] = "1"
     report_type: Literal["b1_cost"] = "b1_cost"
     report_id: UUID
-    milestone: Literal["B1e"] = "B1e"
+    milestone: Literal["B1e", "B1f"] = "B1e"
     created_at: AwareDatetime
     fixture_file: str
     fixture_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
@@ -768,7 +794,7 @@ class B1CostReport(BaseModel):
     model: ModelIdentity
     answer_generation: GenerationConfig
     proposal_generation: GenerationConfig
-    prompt_profile: Literal["compact"]
+    prompt_profile: Literal["compact", "fast"]
     baseline_grounded: AgentStageCost
     legacy_grounded_proposal: AgentStageCost
     legacy_grounded_answer: AgentStageCost
@@ -811,7 +837,7 @@ class B1CostReport(BaseModel):
         )
         baseline_generation = generation(self.baseline_grounded)
         if min(legacy_tokens, baseline_tokens, legacy_generation, baseline_generation) <= 0.0:
-            raise ValueError("B1e comparison requires nonzero reference costs")
+            raise ValueError("B1 cost comparison requires nonzero reference costs")
         expected_costs = (
             1.0 - optimized_tokens / legacy_tokens,
             1.0 - optimized_generation / legacy_generation,
@@ -828,7 +854,7 @@ class B1CostReport(BaseModel):
             abs(actual - expected) > 1e-12
             for actual, expected in zip(actual_costs, expected_costs, strict=True)
         ):
-            raise ValueError("B1e cost deltas do not match stage costs")
+            raise ValueError("B1 cost deltas do not match stage costs")
         expected_gates = (
             self.optimized_grounded_pass_rate >= self.legacy_grounded_pass_rate,
             self.optimized_safety_pass_rate >= self.legacy_safety_pass_rate
@@ -847,9 +873,12 @@ class B1CostReport(BaseModel):
             self.cost_gate_passed,
         )
         if actual_gates != expected_gates or self.gate_passed != all(expected_gates):
-            raise ValueError("B1e gate flags do not match measured outcomes")
+            raise ValueError("B1 cost gate flags do not match measured outcomes")
         if self.optimized_suite.milestone != "B1d":
-            raise ValueError("B1e must use the unchanged B1d fixture suite")
+            raise ValueError("B1 cost optimization must use the unchanged B1d fixture suite")
+        expected_profile = "compact" if self.milestone == "B1e" else "fast"
+        if self.prompt_profile != expected_profile:
+            raise ValueError("B1 cost milestone does not match prompt profile")
         return self
 
 

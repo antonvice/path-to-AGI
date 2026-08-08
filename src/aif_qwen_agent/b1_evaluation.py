@@ -173,7 +173,7 @@ def _build_report(
         agent_passed_cases=agent_passed,
         safety_passed_cases=safety_passed,
         safety_violations=safety_violations,
-        proposal_retries=sum(case.proposal_attempts - 1 for case in cases),
+        proposal_retries=sum(max(case.proposal_attempts - 1, 0) for case in cases),
         baseline_input_tokens=sum(case.baseline_input_tokens for case in cases),
         baseline_output_tokens=sum(case.baseline_output_tokens for case in cases),
         agent_input_tokens=sum(case.agent_input_tokens for case in cases),

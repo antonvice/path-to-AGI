@@ -7,6 +7,7 @@ from uuid import uuid4
 from pydantic import TypeAdapter, ValidationError
 
 from aif_qwen_agent.artifacts import sha256_text
+from aif_qwen_agent.evidence import extract_explicit_file_path, project_evidence
 from aif_qwen_agent.model_adapters.base import AgentModelAdapter, ChatMessage
 from aif_qwen_agent.schemas import (
     AgentAction,
@@ -31,7 +32,7 @@ ACTION_SCHEMA = (
 )
 DEFAULT_ACTION_MAX_BYTES = 16_384
 EXPLICIT_MAX_BYTES = re.compile(r"\bmax_bytes\s+(\d+)\b")
-PromptProfile = Literal["legacy", "compact"]
+PromptProfile = Literal["legacy", "compact", "fast"]
 
 
 class AgentTraceStore:
@@ -68,7 +69,7 @@ class OneStepAgent:
     ) -> None:
         if max_proposal_attempts < 1:
             raise ValueError("max_proposal_attempts must be positive")
-        if prompt_profile not in {"legacy", "compact"}:
+        if prompt_profile not in {"legacy", "compact", "fast"}:
             raise ValueError(f"unsupported prompt profile: {prompt_profile}")
         self.adapter = adapter
         self.model = model
@@ -83,54 +84,67 @@ class OneStepAgent:
         started_at = datetime.now(UTC)
         attempts: list[ProposalAttempt] = []
         action: AgentAction | None = None
+        action_source: Literal["model", "explicit_path"] = "model"
         tool_trace = None
         answer_result = None
         evidence_sha256 = None
+        evidence_excerpt: str | None = None
+        evidence_projection: Literal["lexical_v1"] | None = None
         answer = None
         status: Literal["completed", "stopped", "rejected", "failed"] = "failed"
         error = None
 
-        for attempt_number in range(1, self.max_proposal_attempts + 1):
-            rendered = ""
-            result: ModelResult | None = None
-            try:
-                rendered = self.adapter.render_messages(
-                    self._proposal_messages(task, retry=attempt_number > 1)
-                )
-                result = self.adapter.generate(rendered, self.proposal_generation)
-                action = self._normalize_action(
-                    task,
-                    ACTION_ADAPTER.validate_json(result.text),
-                )
-                attempts.append(
-                    ProposalAttempt(
-                        attempt=attempt_number,
-                        rendered_prompt=rendered,
-                        prompt_sha256=sha256_text(rendered),
-                        result=result,
-                        action=action,
+        explicit_path = (
+            extract_explicit_file_path(task.text) if self.prompt_profile == "fast" else None
+        )
+        if explicit_path is not None:
+            action = self._normalize_action(
+                task,
+                ReadFileAction(kind="read_file", path=explicit_path),
+            )
+            action_source = "explicit_path"
+        else:
+            for attempt_number in range(1, self.max_proposal_attempts + 1):
+                rendered = ""
+                result: ModelResult | None = None
+                try:
+                    rendered = self.adapter.render_messages(
+                        self._proposal_messages(task, retry=attempt_number > 1)
                     )
-                )
-                break
-            except ValidationError as exception:
-                attempts.append(
-                    ProposalAttempt(
-                        attempt=attempt_number,
-                        rendered_prompt=rendered,
-                        prompt_sha256=sha256_text(rendered),
-                        result=result,
-                        error=f"invalid action: {exception}",
+                    result = self.adapter.generate(rendered, self.proposal_generation)
+                    action = self._normalize_action(
+                        task,
+                        ACTION_ADAPTER.validate_json(result.text),
                     )
-                )
-            except Exception as exception:  # noqa: BLE001 - model failures must be traced
-                attempts.append(
-                    ProposalAttempt(
-                        attempt=attempt_number,
-                        rendered_prompt=rendered,
-                        prompt_sha256=sha256_text(rendered),
-                        error=f"{type(exception).__name__}: {exception}",
+                    attempts.append(
+                        ProposalAttempt(
+                            attempt=attempt_number,
+                            rendered_prompt=rendered,
+                            prompt_sha256=sha256_text(rendered),
+                            result=result,
+                            action=action,
+                        )
                     )
-                )
+                    break
+                except ValidationError as exception:
+                    attempts.append(
+                        ProposalAttempt(
+                            attempt=attempt_number,
+                            rendered_prompt=rendered,
+                            prompt_sha256=sha256_text(rendered),
+                            result=result,
+                            error=f"invalid action: {exception}",
+                        )
+                    )
+                except Exception as exception:  # noqa: BLE001 - model failures must be traced
+                    attempts.append(
+                        ProposalAttempt(
+                            attempt=attempt_number,
+                            rendered_prompt=rendered,
+                            prompt_sha256=sha256_text(rendered),
+                            error=f"{type(exception).__name__}: {exception}",
+                        )
+                    )
 
         if isinstance(action, AnswerAction):
             answer = action.answer
@@ -153,9 +167,14 @@ class OneStepAgent:
                 error = "completed read_file trace is missing its observation"
             else:
                 evidence_sha256 = tool_trace.observation.sha256
+                evidence_content = tool_trace.observation.content
+                if self.prompt_profile == "fast":
+                    evidence_excerpt = project_evidence(task.text, evidence_content)
+                    evidence_projection = "lexical_v1"
+                    evidence_content = evidence_excerpt
                 try:
                     rendered = self.adapter.render_messages(
-                        self._answer_messages(task, tool_trace.observation.content, evidence_sha256)
+                        self._answer_messages(task, evidence_content, evidence_sha256)
                     )
                     answer_result = self.adapter.generate(rendered, self.generation)
                     answer = f"{answer_result.text}\n\n[evidence sha256:{evidence_sha256}]"
@@ -179,9 +198,12 @@ class OneStepAgent:
             prompt_profile=self.prompt_profile,
             proposal_attempts=attempts,
             selected_action=action,
+            action_source=action_source,
             tool_trace=tool_trace,
             answer_result=answer_result,
             evidence_sha256=evidence_sha256,
+            evidence_excerpt=evidence_excerpt,
+            evidence_projection=evidence_projection,
             answer=answer,
             status=status,
             error=error,
@@ -194,7 +216,7 @@ class OneStepAgent:
         return trace
 
     def _proposal_messages(self, task: Task, retry: bool) -> list[ChatMessage]:
-        if self.prompt_profile == "compact":
+        if self.prompt_profile in {"compact", "fast"}:
             retry_text = " Invalid before; JSON only." if retry else ""
             return [
                 {
@@ -228,7 +250,7 @@ class OneStepAgent:
         ]
 
     def _answer_messages(self, task: Task, content: str, evidence_sha256: str) -> list[ChatMessage]:
-        if self.prompt_profile == "compact":
+        if self.prompt_profile in {"compact", "fast"}:
             return [
                 {
                     "role": "system",

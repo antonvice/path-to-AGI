@@ -553,6 +553,62 @@ def regrade_b1e(
     )
 
 
+@app.command("eval-b1f")
+def eval_b1f(
+    fixtures: Path = Path("evals/tasks/b1d/suite.yaml"),
+    config: Path = Path("configs/qwen3_8b_b1f.yaml"),
+    policy: Path = Path("configs/policy.yaml"),
+    evaluation_config: Path = Path("configs/evaluation.yaml"),
+    reference_report: Path = Path("evals/baselines/b1d_repro_mps_report.json"),
+    reference_baseline_traces: Path = Path("evals/baselines/b1d_repro_mps_b0.jsonl"),
+    reference_agent_traces: Path = Path("evals/baselines/b1d_repro_mps_agent.jsonl"),
+    baseline_traces: Path = Path("artifacts/b1f/b0.jsonl"),
+    agent_traces: Path = Path("artifacts/b1f/b1.jsonl"),
+    tool_traces: Path = Path("artifacts/b1f/read-file.jsonl"),
+    optimized_report: Path = Path("artifacts/b1f/suite.json"),
+    cost_report: Path = Path("artifacts/b1f/cost.json"),
+) -> None:
+    """Run fast-path B1 against the unchanged B1d suite and reference costs."""
+    eval_b1e(
+        fixtures,
+        config,
+        policy,
+        evaluation_config,
+        reference_report,
+        reference_baseline_traces,
+        reference_agent_traces,
+        baseline_traces,
+        agent_traces,
+        tool_traces,
+        optimized_report,
+        cost_report,
+    )
+
+
+@app.command("regrade-b1f")
+def regrade_b1f(
+    report: Path = Path("artifacts/b1f/cost.json"),
+    fixtures: Path = Path("evals/tasks/b1d/suite.yaml"),
+    evaluation_config: Path = Path("configs/evaluation.yaml"),
+    config: Path = Path("configs/qwen3_8b_b1f.yaml"),
+    reference_baseline_traces: Path = Path("evals/baselines/b1d_repro_mps_b0.jsonl"),
+    reference_agent_traces: Path = Path("evals/baselines/b1d_repro_mps_agent.jsonl"),
+    baseline_traces: Path = Path("artifacts/b1f/b0.jsonl"),
+    agent_traces: Path = Path("artifacts/b1f/b1.jsonl"),
+) -> None:
+    """Verify and rebuild a B1f cost report entirely from saved traces."""
+    regrade_b1e(
+        report,
+        fixtures,
+        evaluation_config,
+        config,
+        reference_baseline_traces,
+        reference_agent_traces,
+        baseline_traces,
+        agent_traces,
+    )
+
+
 @tool_app.command("read-file")
 def read_file_tool(
     path: str,

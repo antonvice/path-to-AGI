@@ -1,6 +1,6 @@
 # Qwen3-8B Active-Inference Agent Harness
 
-Status: implementation-ready technical plan
+Status: implementation in progress; B1f engineering gate passed, held-out B1g validation pending
 Audience: AI engineer, Python engineer, evaluation engineer
 Purpose: build and measure a general-purpose, continually improving agent harness without claiming that the initial system is AGI
 

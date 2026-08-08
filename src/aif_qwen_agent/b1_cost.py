@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Literal, cast
 from uuid import UUID, uuid4
 
 from aif_qwen_agent.agent import AgentTraceStore, OneStepAgent
@@ -81,9 +82,9 @@ def build_b1_cost_report(
         reference.fixture_sha256 != optimized.fixture_sha256
         or optimized.fixture_sha256 != sha256_file(fixture_path)
     ):
-        raise ValueError("B1e requires unchanged reference fixtures")
+        raise ValueError("B1 cost optimization requires unchanged reference fixtures")
     if reference.model != optimized.model or reference.generation != optimized.generation:
-        raise ValueError("B1e reference and optimized model settings differ")
+        raise ValueError("B1 cost reference and optimized model settings differ")
     legacy_grounded_ids = [
         case.agent_run_id
         for suite in reference.suites
@@ -108,9 +109,10 @@ def build_b1_cost_report(
         optimized_agent_traces,
     )
     if safety_answers.calls:
-        raise ValueError("B1e safety cases unexpectedly generated evidence answers")
+        raise ValueError("B1 cost safety cases unexpectedly generated evidence answers")
     optimized_traces = [
-        optimized_agent_traces.get(str(run_id)) for run_id in optimized_grounded_ids
+        optimized_agent_traces.get(str(run_id))
+        for run_id in optimized_grounded_ids + optimized_safety_ids
     ]
     proposal_generation = optimized_traces[0].proposal_generation
     prompt_profiles = {trace.prompt_profile for trace in optimized_traces}
@@ -118,8 +120,10 @@ def build_b1_cost_report(
         trace.proposal_generation != proposal_generation for trace in optimized_traces
     ):
         raise ValueError("optimized traces have inconsistent proposal generation settings")
-    if prompt_profiles != {"compact"}:
-        raise ValueError("B1e requires compact prompt traces")
+    if len(prompt_profiles) != 1 or not prompt_profiles <= {"compact", "fast"}:
+        raise ValueError("B1 cost optimization requires one optimized prompt profile")
+    prompt_profile = cast(Literal["compact", "fast"], prompt_profiles.pop())
+    milestone: Literal["B1e", "B1f"] = "B1f" if prompt_profile == "fast" else "B1e"
     baseline = _baseline_stage(optimized)
     legacy_tokens = _stage_tokens(legacy_proposal, legacy_answer)
     optimized_tokens = _stage_tokens(optimized_proposal, optimized_answer)
@@ -127,6 +131,8 @@ def build_b1_cost_report(
     legacy_generation = _stage_generation(legacy_proposal, legacy_answer)
     optimized_generation = _stage_generation(optimized_proposal, optimized_answer)
     baseline_generation = _stage_generation(baseline)
+    if min(legacy_tokens, baseline_tokens, legacy_generation, baseline_generation) <= 0.0:
+        raise ValueError("B1 cost comparison requires nonzero reference costs")
     agent_settings = load_yaml(agent_config)["agent"]
     promotion = load_yaml(evaluation_config)["promotion"]
     token_reduction = 1.0 - optimized_tokens / legacy_tokens
@@ -149,6 +155,7 @@ def build_b1_cost_report(
     optimization_gate = min(token_reduction, generation_reduction) >= minimum_reduction
     cost_gate = max(grounded_token_increase, grounded_generation_increase) <= maximum_increase
     return B1CostReport(
+        milestone=milestone,
         report_id=uuid4(),
         created_at=datetime.now(UTC),
         fixture_file=str(fixture_path),
@@ -164,7 +171,7 @@ def build_b1_cost_report(
         model=optimized.model,
         answer_generation=optimized.generation,
         proposal_generation=proposal_generation,
-        prompt_profile="compact",
+        prompt_profile=prompt_profile,
         baseline_grounded=baseline,
         legacy_grounded_proposal=legacy_proposal,
         legacy_grounded_answer=legacy_answer,
@@ -206,7 +213,7 @@ def evaluate_b1_cost(
 ) -> B1CostReport:
     reference = load_any_b1_report(reference_report_path)
     if not isinstance(reference, B1RepeatedEvaluationReport):
-        raise ValueError("B1e requires a repeated B1d reference report")
+        raise ValueError("B1 cost optimization requires a repeated B1d reference report")
     verify_repeated_b1_report(
         reference,
         fixture_path,
@@ -248,14 +255,14 @@ def verify_b1_cost_report(
     B1CostReport.model_validate(report.model_dump())
     reference = load_any_b1_report(Path(report.reference_report_file))
     if not isinstance(reference, B1RepeatedEvaluationReport):
-        raise ValueError("B1e reference report is not repeated B1d evidence")
+        raise ValueError("B1 cost reference report is not repeated B1d evidence")
     if report.reference_report_sha256 != sha256_file(Path(report.reference_report_file)):
-        raise ValueError("B1e reference report hash mismatch")
+        raise ValueError("B1 cost reference report hash mismatch")
     optimized = load_b1_report(Path(report.optimized_report_file))
     if report.optimized_report_sha256 != sha256_file(Path(report.optimized_report_file)):
-        raise ValueError("B1e optimized report hash mismatch")
+        raise ValueError("B1 cost optimized report hash mismatch")
     if optimized != report.optimized_suite:
-        raise ValueError("B1e embedded optimized suite mismatch")
+        raise ValueError("B1 cost embedded optimized suite mismatch")
     verify_repeated_b1_report(
         reference,
         fixture_path,
@@ -282,4 +289,4 @@ def verify_b1_cost_report(
     )
     ignored = {"report_id", "created_at"}
     if rebuilt.model_dump(exclude=ignored) != report.model_dump(exclude=ignored):
-        raise ValueError("saved B1e cost report does not match traces")
+        raise ValueError("saved B1 cost report does not match traces")

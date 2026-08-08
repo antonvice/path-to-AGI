@@ -37,6 +37,7 @@ FIXTURES = Path("evals/tasks/b1c/suite.yaml")
 B1D_FIXTURES = Path("evals/tasks/b1d/suite.yaml")
 EVALUATION_CONFIG = Path("configs/evaluation.yaml")
 B1E_CONFIG = Path("configs/qwen3_8b_b1e.yaml")
+B1F_CONFIG = Path("configs/qwen3_8b_b1f.yaml")
 
 
 class SharedAdapter:
@@ -359,4 +360,143 @@ def test_b1e_compact_profile_reduces_stage_costs_and_regrades(tmp_path: Path) ->
             reference_b1,
             optimized_b0,
             optimized_b1,
+        )
+
+
+def test_b1f_fast_path_passes_quality_safety_and_cost_gates(tmp_path: Path) -> None:
+    reference_dir = tmp_path / "reference"
+    optimized_dir = tmp_path / "optimized"
+    reference_dir.mkdir()
+    optimized_dir.mkdir()
+    reference_baseline, reference_agent, reference_b0, reference_b1 = runners(
+        reference_dir, SharedAdapter()
+    )
+    reference_report_path = reference_dir / "report.json"
+    evaluate_repeated_b1(
+        reference_baseline,
+        reference_agent,
+        B1D_FIXTURES,
+        EVALUATION_CONFIG,
+        reference_report_path,
+        repeats=2,
+    )
+    adapter = SharedAdapter()
+    optimized_baseline, optimized_agent, optimized_b0, optimized_b1 = runners(
+        optimized_dir,
+        adapter,
+        prompt_profile="fast",
+        proposal_max_new_tokens=48,
+    )
+    optimized_report_path = optimized_dir / "suite.json"
+    cost_report_path = optimized_dir / "cost.json"
+
+    report = evaluate_b1_cost(
+        optimized_baseline,
+        optimized_agent,
+        B1D_FIXTURES,
+        optimized_report_path,
+        cost_report_path,
+        reference_report_path,
+        reference_b0,
+        reference_b1,
+        EVALUATION_CONFIG,
+        B1F_CONFIG,
+    )
+
+    assert report.milestone == "B1f"
+    assert report.prompt_profile == "fast"
+    assert report.quality_preserved
+    assert report.safety_preserved
+    assert report.optimization_gate_passed
+    assert report.cost_gate_passed
+    assert report.gate_passed
+    assert report.optimized_grounded_proposal.calls == 0
+    assert report.optimized_grounded_answer.calls == 4
+    assert adapter.calls == 10
+    assert all(
+        optimized_b1.get(str(case.agent_run_id)).action_source == "explicit_path"
+        for case in report.optimized_suite.cases
+        if case.kind == "grounded"
+    )
+    verify_b1_cost_report(
+        load_b1_cost_report(cost_report_path),
+        B1D_FIXTURES,
+        EVALUATION_CONFIG,
+        B1F_CONFIG,
+        reference_b0,
+        reference_b1,
+        optimized_b0,
+        optimized_b1,
+    )
+
+
+def test_frozen_real_b1e_cost_report_regrades_offline() -> None:
+    verify_b1_cost_report(
+        load_b1_cost_report(Path("evals/baselines/b1e_mps_cost_report.json")),
+        B1D_FIXTURES,
+        EVALUATION_CONFIG,
+        B1E_CONFIG,
+        TraceStore(Path("evals/baselines/b1d_repro_mps_b0.jsonl")),
+        AgentTraceStore(Path("evals/baselines/b1d_repro_mps_agent.jsonl")),
+        TraceStore(Path("evals/baselines/b1e_mps_b0.jsonl")),
+        AgentTraceStore(Path("evals/baselines/b1e_mps_agent.jsonl")),
+    )
+
+
+def test_frozen_real_b1f_cost_report_regrades_offline() -> None:
+    report = load_b1_cost_report(Path("evals/baselines/b1f_mps_cost_report.json"))
+
+    verify_b1_cost_report(
+        report,
+        B1D_FIXTURES,
+        EVALUATION_CONFIG,
+        B1F_CONFIG,
+        TraceStore(Path("evals/baselines/b1d_repro_mps_b0.jsonl")),
+        AgentTraceStore(Path("evals/baselines/b1d_repro_mps_agent.jsonl")),
+        TraceStore(Path("evals/baselines/b1f_mps_b0.jsonl")),
+        AgentTraceStore(Path("evals/baselines/b1f_mps_agent.jsonl")),
+    )
+    assert report.gate_passed
+
+
+def test_b1_cost_report_rejects_failed_zero_cost_runs(tmp_path: Path) -> None:
+    class FailingAdapter(SharedAdapter):
+        def generate(self, rendered_prompt: str, config: GenerationConfig) -> ModelResult:
+            raise RuntimeError("backend unavailable")
+
+    reference_dir = tmp_path / "reference"
+    optimized_dir = tmp_path / "optimized"
+    reference_dir.mkdir()
+    optimized_dir.mkdir()
+    reference_baseline, reference_agent, reference_b0, reference_b1 = runners(
+        reference_dir, SharedAdapter()
+    )
+    reference_report_path = reference_dir / "report.json"
+    evaluate_repeated_b1(
+        reference_baseline,
+        reference_agent,
+        B1D_FIXTURES,
+        EVALUATION_CONFIG,
+        reference_report_path,
+        repeats=2,
+    )
+    optimized_baseline, optimized_agent, _, _ = runners(
+        optimized_dir,
+        FailingAdapter(),
+        prompt_profile="fast",
+        proposal_max_new_tokens=48,
+    )
+
+    with pytest.raises(ValueError, match="nonzero reference costs"):
+        evaluate_b1_cost(
+            optimized_baseline,
+            optimized_agent,
+            B1D_FIXTURES,
+            optimized_dir / "suite.json",
+            optimized_dir / "cost.json",
+            reference_report_path,
+            reference_b0,
+            reference_b1,
+            EVALUATION_CONFIG,
+            B1F_CONFIG,
         )

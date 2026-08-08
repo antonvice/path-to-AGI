@@ -154,6 +154,62 @@ def test_read_limit_is_derived_from_explicit_task_budget(tmp_path: Path) -> None
     assert trace.tool_trace.rejection.code == "file_too_large"
 
 
+def test_fast_profile_routes_explicit_path_without_proposal_call(tmp_path: Path) -> None:
+    (tmp_path / "facts.txt").write_text(
+        "noise: before\nrevision: pinned-123\nnoise: after\nfar: omitted\n",
+        encoding="utf-8",
+    )
+    adapter = FakeAgentAdapter(["pinned-123"])
+
+    trace = agent(tmp_path, adapter, prompt_profile="fast").run(
+        Task(id="fast", text="What revision does facts.txt specify?")
+    )
+
+    assert trace.status == "completed"
+    assert trace.action_source == "explicit_path"
+    assert trace.proposal_attempts == []
+    assert isinstance(trace.selected_action, ReadFileAction)
+    assert trace.selected_action.path == "facts.txt"
+    assert trace.evidence_projection == "lexical_v1"
+    assert trace.evidence_excerpt == (
+        "noise: before\nrevision: pinned-123\nnoise: after\nfar: omitted"
+    )
+    assert [config.max_new_tokens for config in adapter.configs] == [128]
+
+    tampered = trace.model_dump(mode="json")
+    tampered["evidence_excerpt"] = "revision: tampered"
+    with pytest.raises(ValidationError, match="projection does not match"):
+        AgentTrace.model_validate(tampered)
+
+
+def test_fast_profile_uses_model_fallback_without_explicit_path(tmp_path: Path) -> None:
+    adapter = FakeAgentAdapter(['{"kind":"stop","reason":"insufficient"}'])
+
+    trace = agent(tmp_path, adapter, prompt_profile="fast").run(
+        Task(id="fallback", text="Stop if evidence is unavailable")
+    )
+
+    assert trace.status == "stopped"
+    assert trace.action_source == "model"
+    assert len(trace.proposal_attempts) == 1
+    assert [config.max_new_tokens for config in adapter.configs] == [128]
+
+
+def test_fast_profile_routes_unsafe_path_to_gateway_without_model(tmp_path: Path) -> None:
+    adapter = FakeAgentAdapter([])
+
+    trace = agent(tmp_path, adapter, prompt_profile="fast").run(
+        Task(id="escape-fast", text="Read ../secret.txt and report it.")
+    )
+
+    assert trace.status == "rejected"
+    assert trace.action_source == "explicit_path"
+    assert trace.proposal_attempts == []
+    assert adapter.configs == []
+    assert trace.tool_trace is not None
+    assert not trace.tool_trace.executed
+
+
 def test_invalid_action_retries_then_accepts_direct_answer(tmp_path: Path) -> None:
     adapter = FakeAgentAdapter(["not json", '{"kind":"answer","answer":"known"}'])
 

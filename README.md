@@ -36,6 +36,8 @@ Working now:
   quality/cost metrics, immutable traces, and offline tamper-detecting regrading.
 - B1d three-repeat adversarial gate with prompt-injection checks, action/output/token/rejection/
   evidence agreement, memory pressure, latency separation, and explicit promotion-cost failure.
+- B1e compact prompt profile with proposal-specific generation, policy-derived read budgets,
+  stage-level cost attribution, and offline-verifiable optimization and promotion gates.
 - Typed schemas for beliefs, actions, predicted outcomes, truth bounds, and logical facts.
 - Transparent MVP active-inference score with separately logged terms.
 - Hard policy and logical filtering before action scoring.
@@ -49,7 +51,7 @@ Not implemented yet:
 - Independent-process cold-start benchmarking.
 - Sandboxed Python and test execution tools.
 - SQLite run, artifact, evaluation, and memory storage.
-- Independent-process held-out B1 promotion and cost remediation.
+- Independent-process held-out B1 promotion and further token-cost remediation.
 - Durable belief updates or semantic memory.
 - Calibrated world-model prediction.
 
@@ -205,11 +207,19 @@ uv run aif-qwen-agent eval-b1
 uv run aif-qwen-agent regrade-b1
 ```
 
+Run the compact B1e cost comparison against the frozen B1d reference:
+
+```bash
+uv run aif-qwen-agent eval-b1e
+uv run aif-qwen-agent regrade-b1e
+```
+
 ## Repository map
 
 | Path | Purpose |
 |---|---|
 | `configs/qwen3_8b.yaml` | Pinned model, local backend, context, generation, and seed settings |
+| `configs/qwen3_8b_b1e.yaml` | Compact prompt profile and proposal-generation budget |
 | `configs/policy.yaml` | Filesystem, network, authorization, retry, and task budgets |
 | `configs/logic.yaml` | Active logic backend and bounded inference settings |
 | `configs/evaluation.yaml` | Dataset splits and promotion gates |
@@ -217,6 +227,7 @@ uv run aif-qwen-agent regrade-b1
 | `src/aif_qwen_agent/agent.py` | Bounded one-step proposal, tool, answer, and trace lifecycle |
 | `src/aif_qwen_agent/b1_evaluation.py` | Shared-model B0/B1 quality, safety, and regrade pipeline |
 | `src/aif_qwen_agent/b1_reproducibility.py` | Repeated agreement, latency, memory, and cost gates |
+| `src/aif_qwen_agent/b1_cost.py` | Stage-cost comparison and offline B1e verification |
 | `src/aif_qwen_agent/controller.py` | Hard filtering and lowest-score action selection |
 | `src/aif_qwen_agent/aif_score.py` | Transparent MVP active-inference approximation |
 | `src/aif_qwen_agent/logic_backends/` | Logic protocol and Python-predicate baseline |
@@ -389,51 +400,53 @@ The typed report is `evals/baselines/b1d_repro_mps_report.json`; its 12 B0 trace
 and 21 tool traces are stored alongside it. The overall gate is intentionally false: behavioral
 success does not override the configured cost ceiling.
 
-## What can be completed in the next hour
+## B1e cost-remediation result
 
-The next useful one-hour deliverable is B1e: cost decomposition and remediation.
+The one-pass optimized B1e suite completed and regraded offline on 2026-08-08. It used the same
+pinned model, answer-generation settings, B1d fixtures, graders, and 25% promotion ceiling as the
+three-repeat B1d reference.
 
-Target command:
+| Gate or metric | Result |
+|---|---:|
+| Grounded quality | PASS — 4/4 |
+| Safety | PASS — 4/4, zero violations |
+| Prompt-injection resistance | PASS — 1/1 |
+| Optimization gate | PASS |
+| Grounded tokens vs legacy B1d | 1,005 vs 1,546 — 35.0% lower |
+| Grounded generation vs legacy B1d | 66.17s vs 114.99s — 42.5% lower |
+| Grounded tokens vs same-run B0 | 1,005 vs 396 — 153.8% higher |
+| Grounded generation vs same-run B0 | 66.17s vs 67.57s — 2.1% lower |
+| Configured maximum cost increase | +25% |
+| Promotion cost gate | FAIL |
+| Overall gate | FAIL |
 
-```bash
-uv run aif-qwen-agent eval-b1 --repeats 3 --config configs/qwen3_8b_b1e.yaml
-```
+The compact profile limits proposals to 48 new tokens, removes duplicated evidence framing, and
+keeps the untrusted-evidence instruction. Read budgets are normalized outside the model: ordinary
+reads use 16,384 bytes, while an explicit `max_bytes N` task constraint is copied exactly before
+the unchanged tool gateway runs.
 
-It should:
+The typed report is `evals/baselines/b1e_mps_cost_report.json`; its four B0 traces, eight B1
+traces, seven tool traces, and optimized suite report are stored alongside it. `regrade-b1e`
+verified all hashes and rebuilt the report without loading the model.
 
-- Split B1 cost into proposal prompt, proposal output, evidence prompt, and answer output.
-- Compact the action schema prompt and use a separate bounded proposal-generation configuration.
-- Remove duplicated evidence framing while preserving injection resistance and evidence hashes.
-- Re-run the same frozen B1d suite without changing graders or the 25% ceiling.
-- Reject promotion explicitly if the two-call architecture cannot satisfy the cost contract.
+This result establishes material optimization on the frozen engineering suite, not reproducible
+latency or held-out promotion. The overall gate remains false because generation savings do not
+override the token ceiling.
 
-Realistic 60-minute scope:
+## Next roadmap step
 
-1. Minutes 0-15: add stage-level token and latency aggregates to agent and suite reports.
-2. Minutes 15-30: introduce a compact proposal prompt and proposal-specific token budget.
-3. Minutes 30-40: compact evidence framing without weakening untrusted-data instructions.
-4. Minutes 40-50: add regression tests for action validity and prompt-injection resistance.
-5. Minutes 50-60: run one comparison suite and quantify savings before any repeated rerun.
+B1f should remove avoidable model calls rather than compressing prompts further:
 
-Definition of done for the hour:
+- Add a deterministic fast path for tasks that explicitly name a workspace-relative file, with
+  the model proposal retained only for ambiguous tasks.
+- Project verified evidence to a small relevant excerpt while preserving the original content
+  hash and prompt-injection checks.
+- Keep the B1d fixtures, graders, model revision, and 25% ceiling unchanged during development.
+- Add untuned held-out fixtures, then run repeated independent processes before any promotion
+  claim.
 
-- Every saved B1 trace attributes tokens and latency to proposal versus evidence-answer stages.
-- Grounded quality, safety, injection resistance, and deterministic action selection do not regress.
-- Token and generation cost both decline materially on the unchanged fixture set.
-- The original and optimized reports remain independently regradable.
-- Any ceiling exception is documented as a policy decision, not encoded as a passing result.
-- Tests, Ruff, and strict mypy remain green.
-- The agent remains one-step and read-only; Python, tests, shell, network, and writes stay
-  unavailable.
-
-Explicitly out of scope for that hour:
-
-- Multi-step tool execution or recovery.
-- SQLite memory.
-- A multi-step controller loop.
-- LNN installation.
-- Fine-tuning or self-improvement.
-- Promotion claims against held-out tasks.
+The immediate exit gate is grounded quality and safety at 100%, at least 10% lower cost than B1d,
+and no more than 25% token or generation overhead versus same-task B0.
 
 ## Milestones
 

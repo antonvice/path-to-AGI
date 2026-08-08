@@ -1,0 +1,16 @@
+model:
+  repo_id: Qwen/Qwen3-8B
+  revision: b968826d9c46dd6066d109eabc6255188de91218
+  local_path: models/Qwen3-8B
+  dtype: auto
+inference:
+  backend: transformers_mps
+  max_context_tokens: 32768
+  max_new_tokens: 128
+  temperature: 0.0
+  seed: 42
+  enable_thinking: false
+agent:
+  prompt_profile: compact
+  proposal_max_new_tokens: 48
+  minimum_cost_reduction: 0.10

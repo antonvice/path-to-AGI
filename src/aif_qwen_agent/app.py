@@ -8,6 +8,11 @@ from rich.table import Table
 from aif_qwen_agent.agent import AgentTraceStore, OneStepAgent
 from aif_qwen_agent.aif_score import aif_score
 from aif_qwen_agent.artifacts import TraceStore
+from aif_qwen_agent.b1_cost import (
+    evaluate_b1_cost,
+    load_b1_cost_report,
+    verify_b1_cost_report,
+)
 from aif_qwen_agent.b1_evaluation import (
     evaluate_b1,
     verify_b1_report,
@@ -87,6 +92,14 @@ def _build_agent_runner(
         backend=settings["inference"]["backend"],
     )
     generation = GenerationConfig.model_validate(settings["inference"])
+    agent_settings = settings.get("agent", {})
+    proposal_generation = generation.model_copy(
+        update={
+            "max_new_tokens": agent_settings.get(
+                "proposal_max_new_tokens", generation.max_new_tokens
+            )
+        }
+    )
     adapter = TransformersAdapter(
         model_path=model.local_path,
         backend=model.backend,
@@ -104,6 +117,8 @@ def _build_agent_runner(
         read_file,
         AgentTraceStore(traces),
         max_proposal_attempts=policy_settings["budgets"]["max_retries_per_action"] + 1,
+        proposal_generation=proposal_generation,
+        prompt_profile=agent_settings.get("prompt_profile", "legacy"),
     )
 
 
@@ -123,6 +138,14 @@ def _build_b1_runners(
         backend=settings["inference"]["backend"],
     )
     generation = GenerationConfig.model_validate(settings["inference"])
+    agent_settings = settings.get("agent", {})
+    proposal_generation = generation.model_copy(
+        update={
+            "max_new_tokens": agent_settings.get(
+                "proposal_max_new_tokens", generation.max_new_tokens
+            )
+        }
+    )
     adapter = TransformersAdapter(
         model_path=model.local_path,
         backend=model.backend,
@@ -140,6 +163,8 @@ def _build_b1_runners(
         ),
         AgentTraceStore(agent_traces),
         max_proposal_attempts=policy_settings["budgets"]["max_retries_per_action"] + 1,
+        proposal_generation=proposal_generation,
+        prompt_profile=agent_settings.get("prompt_profile", "legacy"),
     )
     return baseline, agent
 
@@ -429,6 +454,102 @@ def regrade_b1(
         f"verified report={result.report_id} gate={'PASS' if result.gate_passed else 'FAIL'} "
         f"grounded={result.agent_passed_cases}/{result.grounded_cases} "
         f"safety={result.safety_passed_cases}/{result.safety_cases}"
+    )
+
+
+@app.command("eval-b1e")
+def eval_b1e(
+    fixtures: Path = Path("evals/tasks/b1d/suite.yaml"),
+    config: Path = Path("configs/qwen3_8b_b1e.yaml"),
+    policy: Path = Path("configs/policy.yaml"),
+    evaluation_config: Path = Path("configs/evaluation.yaml"),
+    reference_report: Path = Path("evals/baselines/b1d_repro_mps_report.json"),
+    reference_baseline_traces: Path = Path("evals/baselines/b1d_repro_mps_b0.jsonl"),
+    reference_agent_traces: Path = Path("evals/baselines/b1d_repro_mps_agent.jsonl"),
+    baseline_traces: Path = Path("artifacts/b1e/b0.jsonl"),
+    agent_traces: Path = Path("artifacts/b1e/b1.jsonl"),
+    tool_traces: Path = Path("artifacts/b1e/read-file.jsonl"),
+    optimized_report: Path = Path("artifacts/b1e/suite.json"),
+    cost_report: Path = Path("artifacts/b1e/cost.json"),
+) -> None:
+    """Run compact B1 against the unchanged B1d suite and reference costs."""
+    baseline, agent = _build_b1_runners(
+        config,
+        policy,
+        baseline_traces,
+        agent_traces,
+        tool_traces,
+    )
+    result = evaluate_b1_cost(
+        baseline,
+        agent,
+        fixtures,
+        optimized_report,
+        cost_report,
+        reference_report,
+        TraceStore(reference_baseline_traces),
+        AgentTraceStore(reference_agent_traces),
+        evaluation_config,
+        config,
+    )
+    table = Table("Stage", "Legacy tokens", "Optimized tokens", "Legacy time", "Optimized time")
+    for name, legacy, optimized in (
+        (
+            "proposal",
+            result.legacy_grounded_proposal,
+            result.optimized_grounded_proposal,
+        ),
+        ("answer", result.legacy_grounded_answer, result.optimized_grounded_answer),
+    ):
+        table.add_row(
+            name,
+            f"{legacy.input_tokens + legacy.output_tokens:.0f}",
+            f"{optimized.input_tokens + optimized.output_tokens:.0f}",
+            f"{legacy.generation_seconds:.2f}s",
+            f"{optimized.generation_seconds:.2f}s",
+        )
+    console.print(table)
+    console.print(
+        f"[dim]gate={'PASS' if result.gate_passed else 'FAIL'} "
+        f"quality={'PASS' if result.quality_preserved else 'FAIL'} "
+        f"safety={'PASS' if result.safety_preserved else 'FAIL'} "
+        f"optimization={'PASS' if result.optimization_gate_passed else 'FAIL'} "
+        f"cost={'PASS' if result.cost_gate_passed else 'FAIL'} "
+        f"token_reduction={result.token_reduction:.1%} "
+        f"generation_reduction={result.generation_reduction:.1%} "
+        f"grounded_token_cost={result.grounded_token_cost_increase:.1%} "
+        f"grounded_generation_cost={result.grounded_generation_cost_increase:.1%} "
+        f"report={cost_report}[/dim]"
+    )
+
+
+@app.command("regrade-b1e")
+def regrade_b1e(
+    report: Path = Path("artifacts/b1e/cost.json"),
+    fixtures: Path = Path("evals/tasks/b1d/suite.yaml"),
+    evaluation_config: Path = Path("configs/evaluation.yaml"),
+    config: Path = Path("configs/qwen3_8b_b1e.yaml"),
+    reference_baseline_traces: Path = Path("evals/baselines/b1d_repro_mps_b0.jsonl"),
+    reference_agent_traces: Path = Path("evals/baselines/b1d_repro_mps_agent.jsonl"),
+    baseline_traces: Path = Path("artifacts/b1e/b0.jsonl"),
+    agent_traces: Path = Path("artifacts/b1e/b1.jsonl"),
+) -> None:
+    """Verify and rebuild a B1e cost report entirely from saved traces."""
+    result = load_b1_cost_report(report)
+    verify_b1_cost_report(
+        result,
+        fixtures,
+        evaluation_config,
+        config,
+        TraceStore(reference_baseline_traces),
+        AgentTraceStore(reference_agent_traces),
+        TraceStore(baseline_traces),
+        AgentTraceStore(agent_traces),
+    )
+    console.print(
+        f"verified report={result.report_id} gate={'PASS' if result.gate_passed else 'FAIL'} "
+        f"optimization={'PASS' if result.optimization_gate_passed else 'FAIL'} "
+        f"cost={'PASS' if result.cost_gate_passed else 'FAIL'}"
     )
 
 

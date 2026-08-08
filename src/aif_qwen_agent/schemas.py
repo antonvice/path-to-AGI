@@ -170,6 +170,8 @@ class AgentTrace(BaseModel):
     task: Task
     model: ModelIdentity
     generation: GenerationConfig
+    proposal_generation: GenerationConfig | None = None
+    prompt_profile: Literal["legacy", "compact"] | None = None
     proposal_attempts: list[ProposalAttempt] = Field(min_length=1)
     selected_action: AgentAction | None = None
     tool_trace: ReadFileTrace | None = None
@@ -737,6 +739,117 @@ class B1RepeatedEvaluationReport(BaseModel):
         )
         if actual_gates != expected_gates or self.gate_passed != all(expected_gates):
             raise ValueError("B1 repeated gate flags do not match outcomes")
+        return self
+
+
+class AgentStageCost(BaseModel):
+    calls: int = Field(ge=0)
+    input_tokens: float = Field(ge=0.0)
+    output_tokens: float = Field(ge=0.0)
+    generation_seconds: float = Field(ge=0.0)
+
+
+class B1CostReport(BaseModel):
+    schema_version: Literal["1"] = "1"
+    report_type: Literal["b1_cost"] = "b1_cost"
+    report_id: UUID
+    milestone: Literal["B1e"] = "B1e"
+    created_at: AwareDatetime
+    fixture_file: str
+    fixture_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    evaluation_config_file: str
+    evaluation_config_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    agent_config_file: str
+    agent_config_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    reference_report_file: str
+    reference_report_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    optimized_report_file: str
+    optimized_report_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    model: ModelIdentity
+    answer_generation: GenerationConfig
+    proposal_generation: GenerationConfig
+    prompt_profile: Literal["compact"]
+    baseline_grounded: AgentStageCost
+    legacy_grounded_proposal: AgentStageCost
+    legacy_grounded_answer: AgentStageCost
+    optimized_grounded_proposal: AgentStageCost
+    optimized_grounded_answer: AgentStageCost
+    optimized_safety_proposal: AgentStageCost
+    legacy_grounded_pass_rate: UnitInterval
+    optimized_grounded_pass_rate: UnitInterval
+    legacy_safety_pass_rate: UnitInterval
+    optimized_safety_pass_rate: UnitInterval
+    legacy_instruction_following_violations: int = Field(ge=0)
+    optimized_instruction_following_violations: int = Field(ge=0)
+    token_reduction: float
+    generation_reduction: float
+    minimum_cost_reduction: UnitInterval
+    grounded_token_cost_increase: float = Field(ge=-1.0)
+    grounded_generation_cost_increase: float = Field(ge=-1.0)
+    maximum_cost_increase: UnitInterval
+    quality_preserved: bool
+    safety_preserved: bool
+    optimization_gate_passed: bool
+    cost_gate_passed: bool
+    gate_passed: bool
+    optimized_suite: B1EvaluationReport
+
+    @model_validator(mode="after")
+    def b1e_costs_and_gates_match_stages(self) -> "B1CostReport":
+        def tokens(*stages: AgentStageCost) -> float:
+            return sum(stage.input_tokens + stage.output_tokens for stage in stages)
+
+        def generation(*stages: AgentStageCost) -> float:
+            return sum(stage.generation_seconds for stage in stages)
+
+        legacy_tokens = tokens(self.legacy_grounded_proposal, self.legacy_grounded_answer)
+        optimized_tokens = tokens(self.optimized_grounded_proposal, self.optimized_grounded_answer)
+        baseline_tokens = tokens(self.baseline_grounded)
+        legacy_generation = generation(self.legacy_grounded_proposal, self.legacy_grounded_answer)
+        optimized_generation = generation(
+            self.optimized_grounded_proposal, self.optimized_grounded_answer
+        )
+        baseline_generation = generation(self.baseline_grounded)
+        if min(legacy_tokens, baseline_tokens, legacy_generation, baseline_generation) <= 0.0:
+            raise ValueError("B1e comparison requires nonzero reference costs")
+        expected_costs = (
+            1.0 - optimized_tokens / legacy_tokens,
+            1.0 - optimized_generation / legacy_generation,
+            optimized_tokens / baseline_tokens - 1.0,
+            optimized_generation / baseline_generation - 1.0,
+        )
+        actual_costs = (
+            self.token_reduction,
+            self.generation_reduction,
+            self.grounded_token_cost_increase,
+            self.grounded_generation_cost_increase,
+        )
+        if any(
+            abs(actual - expected) > 1e-12
+            for actual, expected in zip(actual_costs, expected_costs, strict=True)
+        ):
+            raise ValueError("B1e cost deltas do not match stage costs")
+        expected_gates = (
+            self.optimized_grounded_pass_rate >= self.legacy_grounded_pass_rate,
+            self.optimized_safety_pass_rate >= self.legacy_safety_pass_rate
+            and self.optimized_instruction_following_violations == 0,
+            min(self.token_reduction, self.generation_reduction) >= self.minimum_cost_reduction,
+            max(
+                self.grounded_token_cost_increase,
+                self.grounded_generation_cost_increase,
+            )
+            <= self.maximum_cost_increase,
+        )
+        actual_gates = (
+            self.quality_preserved,
+            self.safety_preserved,
+            self.optimization_gate_passed,
+            self.cost_gate_passed,
+        )
+        if actual_gates != expected_gates or self.gate_passed != all(expected_gates):
+            raise ValueError("B1e gate flags do not match measured outcomes")
+        if self.optimized_suite.milestone != "B1d":
+            raise ValueError("B1e must use the unchanged B1d fixture suite")
         return self
 
 

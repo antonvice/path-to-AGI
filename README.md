@@ -74,6 +74,9 @@ Working now:
 - B1g frozen held-out evaluation across three cold, independent harness processes, with hashed
   per-process reports/traces, strict behavioral agreement, grounded-only cost comparison, and
   fully offline regrading.
+- Initial B2 episodic-memory layer with immutable verified episodes, content-addressed
+  deduplication, schema-versioned SQLite/FTS5 storage, deterministic lexical retrieval,
+  provenance-preserving context rendering, and payload/index corruption detection.
 - Typed schemas for beliefs, actions, predicted outcomes, truth bounds, and logical facts.
 - Transparent MVP active-inference score with separately logged terms.
 - Hard policy and logical filtering before action scoring.
@@ -85,7 +88,7 @@ Working now:
 Not implemented yet:
 
 - Sandboxed Python and test execution tools.
-- SQLite run, artifact, evaluation, and memory storage.
+- Unified SQLite storage for runs, artifacts, evaluations, and later semantic/procedural memory.
 - Durable belief updates or semantic memory.
 - Calibrated world-model prediction.
 
@@ -277,7 +280,9 @@ uv run aif-qwen-agent regrade-b1f
 | `configs/policy.yaml` | Filesystem, network, authorization, retry, and task budgets |
 | `configs/logic.yaml` | Active logic backend and bounded inference settings |
 | `configs/evaluation.yaml` | Dataset splits and promotion gates |
+| `configs/memory.yaml` | B2 SQLite path, schema version, retrieval backend, and default limit |
 | `src/aif_qwen_agent/schemas.py` | Typed beliefs, actions, predictions, and logical facts |
+| `src/aif_qwen_agent/memory.py` | Content-addressed verified episodes and SQLite FTS5 retrieval |
 | `src/aif_qwen_agent/agent.py` | Bounded one-step proposal, tool, answer, and trace lifecycle |
 | `src/aif_qwen_agent/b1_evaluation.py` | Shared-model B0/B1 quality, safety, and regrade pipeline |
 | `src/aif_qwen_agent/b1_reproducibility.py` | Repeated agreement, latency, memory, and cost gates |
@@ -555,11 +560,28 @@ aggregate without loading the model. Ollama was empty after the run.
 This establishes promotion on the hand-authored B1g held-out suite. It does not establish broad
 generalization beyond that suite or compare model families independently of the harness.
 
+## B2 episodic retrieval in progress
+
+The first B2 storage/retrieval slice is implemented without a model call:
+
+- only schema-valid, completed, verified episodes can become retrieval candidates;
+- each episode retains task, outcome, evidence excerpt, source URI, full source SHA-256, and tags;
+- a canonical content hash makes repeated content idempotent while retaining conflicting episodes;
+- SQLite schema version 1 stores immutable JSON and a separately verified FTS5 index;
+- lexical retrieval is deterministic under fixed data/query inputs and returns provenance-rich
+  ranked hits;
+- retrieved context is explicitly labeled untrusted data and carries episode/source hashes;
+- payload, metadata, index-text, count, and schema-version corruption fail closed.
+
+This is infrastructure, not B2 promotion. It has not yet been injected into the model path or run
+against a frozen two-session held-out suite.
+
 ## Next roadmap step
 
-Advance to B2 episodic retrieval: persist verified episodes, retrieve them in later sessions, and
-measure whether retrieval improves a newly frozen cross-session suite without safety, relevance,
-or cost regression. Keep B1d, B1f, and B1g immutable.
+Connect the verified store to a separate two-session B2 evaluator, define a no-memory baseline,
+freeze positive/irrelevant/conflicting/prompt-injection fixtures, and measure whether retrieval
+improves later-session answers without safety, provenance, relevance, reproducibility, or cost
+regression. Keep B1d, B1f, and B1g immutable.
 
 ## Milestones
 

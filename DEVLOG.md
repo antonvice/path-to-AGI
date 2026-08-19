@@ -185,6 +185,28 @@ Commit: `c5dc249` — `Add digest-verified B1g independent process gate`
 
 Commit: `7d480e2` — `Record passing B1g held-out promotion`
 
+## 2026-08-19 — B2 episodic retrieval started
+
+- Added typed episode evidence, immutable episode, write-result, retrieval-query, retrieval-hit,
+  and retrieval-result schemas.
+- Restricted retrieval candidates to completed, verified episodes with at least one evidence item.
+- Added canonical episode content hashes over task, outcome, evidence, and tags.
+- Implemented idempotent duplicate-content writes while keeping contradictory verified episodes as
+  separate addressable records.
+- Added schema-versioned SQLite storage and deterministic FTS5 lexical retrieval using only the
+  Python standard library.
+- Added provenance-preserving context rendering that labels retrieved content as untrusted data and
+  includes episode, content, source, and source-hash identifiers.
+- Added full integrity verification across immutable JSON, redundant metadata, searchable FTS text,
+  and episode/index row counts.
+- Added tests for round-trip retrieval, evidence-cited context, duplicate content, unverified
+  rejection, payload tampering, FTS tampering, contradiction retention, irrelevant queries, and
+  unsupported schema versions.
+
+This is the first B2 implementation slice, not a promotion result. Model context injection, a
+matched no-memory baseline, frozen two-session fixtures, independent-process evaluation, and cost
+gates remain next.
+
 ## What the project has established
 
 - Typed tools plus verified evidence can improve file-grounded behavior over answer-only B0.

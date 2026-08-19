@@ -1,0 +1,5 @@
+database: data/memory.db
+schema_version: "1"
+retrieval:
+  backend: sqlite_fts5
+  default_limit: 5

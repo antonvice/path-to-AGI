@@ -1,3 +1,4 @@
+import json
 from enum import StrEnum
 from hashlib import sha256
 from pathlib import Path
@@ -1288,6 +1289,83 @@ class EvidenceRef(BaseModel):
     artifact_id: str
     excerpt_hash: str | None = None
     reliability: UnitInterval
+
+
+class EpisodeEvidence(BaseModel):
+    artifact_id: str = Field(min_length=1)
+    source_uri: str = Field(min_length=1)
+    source_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    excerpt: str = Field(min_length=1)
+
+
+def episodic_content_sha256(
+    task: Task,
+    outcome: str,
+    evidence: list[EpisodeEvidence],
+    tags: list[str],
+) -> str:
+    payload = {
+        "task": task.model_dump(mode="json"),
+        "outcome": outcome,
+        "evidence": [item.model_dump(mode="json") for item in evidence],
+        "tags": tags,
+    }
+    canonical = json.dumps(payload, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+    return sha256(canonical.encode("utf-8")).hexdigest()
+
+
+class EpisodicMemory(BaseModel):
+    schema_version: Literal["1"] = "1"
+    episode_id: UUID
+    created_at: AwareDatetime
+    task: Task
+    outcome: str = Field(min_length=1)
+    evidence: list[EpisodeEvidence] = Field(min_length=1)
+    tags: list[str] = Field(default_factory=list)
+    status: Literal["completed"] = "completed"
+    verified: Literal[True] = True
+    content_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+    @model_validator(mode="after")
+    def content_is_verified_and_addressable(self) -> "EpisodicMemory":
+        if len({item.artifact_id for item in self.evidence}) != len(self.evidence):
+            raise ValueError("episode evidence artifact IDs must be unique")
+        if len(set(self.tags)) != len(self.tags):
+            raise ValueError("episode tags must be unique")
+        expected = episodic_content_sha256(self.task, self.outcome, self.evidence, self.tags)
+        if self.content_sha256 != expected:
+            raise ValueError("episode content hash does not match verified content")
+        return self
+
+
+class EpisodeWriteResult(BaseModel):
+    episode: EpisodicMemory
+    inserted: bool
+
+
+class EpisodicRetrievalQuery(BaseModel):
+    text: str = Field(min_length=1)
+    limit: int = Field(default=5, ge=1, le=50)
+
+
+class EpisodicRetrievalHit(BaseModel):
+    rank: int = Field(gt=0)
+    score: float = Field(ge=0.0)
+    matched_terms: list[str] = Field(min_length=1)
+    episode: EpisodicMemory
+
+
+class EpisodicRetrievalResult(BaseModel):
+    query: EpisodicRetrievalQuery
+    hits: list[EpisodicRetrievalHit]
+
+    @model_validator(mode="after")
+    def hits_are_ranked_and_unique(self) -> "EpisodicRetrievalResult":
+        if [hit.rank for hit in self.hits] != list(range(1, len(self.hits) + 1)):
+            raise ValueError("episodic retrieval ranks must be contiguous")
+        if len({hit.episode.episode_id for hit in self.hits}) != len(self.hits):
+            raise ValueError("episodic retrieval cannot repeat episodes")
+        return self
 
 
 class Hypothesis(BaseModel):

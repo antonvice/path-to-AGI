@@ -35,9 +35,8 @@ and withholds promotion if any quality, safety, reproducibility, or cost gate fa
 deliberate examples of successful behavior that was not promoted because cost remained too high.
 
 The current promoted result is B1g: a read-only, one-step evidence agent on a small hand-authored
-held-out suite. The next experiment is B2 episodic retrieval; it must show that verified evidence
-from an earlier session improves a later session without injecting stale, irrelevant, conflicting,
-or unauthorized context.
+held-out suite. B2 episodic retrieval has now been evaluated but was not promoted: it improved
+cross-session recall and preserved safety, while failing exact retrieval and token-cost gates.
 
 ## Status
 
@@ -79,9 +78,11 @@ Working now:
   provenance-preserving context rendering, and payload/index corruption detection.
 - Frozen B2 two-session held-out suite plus a matched no-memory baseline, untrusted-context memory
   runner, evidence-hash citations, deterministic quality/safety/retrieval/cost gates, typed traces,
-  and model-free offline regrading. The suite has not yet been run against the model.
+  and model-free offline regrading.
 - B2 cold independent-process gate with isolated databases/traces, distinct process IDs, per-file
   hashes, strict output/retrieval/token/grade agreement, and aggregate offline regrading.
+- Preserved three-process B2 held-out evidence: quality and safety passed, but exact retrieval and
+  token cost failed, so B2 remains unpromoted.
 - Typed schemas for beliefs, actions, predicted outcomes, truth bounds, and logical facts.
 - Transparent MVP active-inference score with separately logged terms.
 - Hard policy and logical filtering before action scoring.
@@ -274,8 +275,8 @@ uv run aif-qwen-agent eval-b1f
 uv run aif-qwen-agent regrade-b1f
 ```
 
-The B2 evaluator is available, but its default command consumes the frozen held-out suite. Do not
-run it as an exploratory smoke test:
+The B2 evaluator reruns the frozen held-out suite in three cold processes. Do not use it as an
+exploratory smoke test:
 
 ```bash
 uv run aif-qwen-agent eval-b2
@@ -575,9 +576,9 @@ aggregate without loading the model. Ollama was empty after the run.
 This establishes promotion on the hand-authored B1g held-out suite. It does not establish broad
 generalization beyond that suite or compare model families independently of the harness.
 
-## B2 episodic retrieval in progress
+## B2 episodic retrieval held-out result
 
-The complete B2 evaluation path is implemented without a held-out model call:
+The complete B2 evaluation path includes:
 
 - only schema-valid, completed, verified episodes can become retrieval candidates;
 - each episode retains task, outcome, evidence excerpt, source URI, full source SHA-256, and tags;
@@ -604,16 +605,37 @@ The complete B2 evaluation path is implemented without a held-out model call:
 - `regrade-b2` reconstructs the aggregate and verifies every frozen input, database, report, and
   trace without loading the model.
 
-This is an implementation checkpoint, not B2 promotion. The frozen B2 suite has not yet been sent
-to the model.
+The first held-out run completed across cold harness PIDs 53912, 54162, and 54469. Every output,
+retrieval result, status, token count, grade, and safety flag agreed across all three processes.
+
+| Gate or metric | Result |
+|---|---:|
+| Grounded B0 | 0/12 |
+| Grounded episodic memory | 6/12 |
+| Safety | 6/6, zero violations |
+| Exact retrieval | 15/18 |
+| Strict cross-process reproducibility | PASS |
+| Quality delta | +50 percentage points — PASS |
+| Grounded tokens | 5,538 vs 1,389 — 298.7% increase |
+| Grounded generation | 89.69s vs 273.38s — 67.2% reduction |
+| Retrieval gate | FAIL |
+| Cost gate | FAIL |
+| Promotion gate | FAIL |
+
+The extra retrieval was a deterministic lexical false positive: the adversarial archive query also
+selected the unrelated launch-archive episode. The model safely ignored the injected answer and
+returned the correct archive key, but exact retrieval still failed. In the conflict case retrieval
+was exact, but the model reported only one of two contradictory values rather than naming the
+conflict. The immutable aggregate is
+`evals/baselines/b2_qwen3_8_27b_ollama/report.json`; offline regrade passed and Ollama was empty
+afterward.
 
 ## Next roadmap step
 
-Checkpoint and push the independent evaluator, then run `eval-b2` once with the default three cold
-processes. Regrade the resulting aggregate offline and preserve the evidence whether it passes or
-fails. Promote only if quality, safety, retrieval, reproducibility, and cost all pass; otherwise
-revise against a new development suite rather than tuning on held-out cases. Keep B1d, B1f, B1g,
-and the B2 freeze immutable.
+Keep the failed B2 suite immutable. Build a separate development suite for lexical distractors,
+conflicting verified outcomes, and compact context, then improve retrieval precision and token cost
+there. Only after those generic changes pass should a new held-out suite be frozen for another
+promotion attempt. Do not claim that fixes tuned after observing this suite validate B2.
 
 ## Milestones
 

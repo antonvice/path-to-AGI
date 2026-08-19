@@ -1,6 +1,6 @@
 # Qwen3-8B Active-Inference Agent Harness
 
-Status: B1g promotion passed 2026-08-19; B2 verified episodic retrieval implementation underway
+Status: B1g promotion passed 2026-08-19; B2 held-out quality/safety passed but promotion failed on retrieval precision and token cost
 Audience: AI engineer, Python engineer, evaluation engineer
 Purpose: build and measure a general-purpose, continually improving agent harness without claiming that the initial system is AGI
 

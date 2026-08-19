@@ -1,0 +1,20 @@
+{
+  "schema_version": "1",
+  "milestone": "B2",
+  "frozen_on": "2026-08-19",
+  "model": "orcarouter/Qwen3.8-27B-Uncensored:iq4_xs",
+  "model_digest": "84e6355d6764e264ccdfe486243821e7000eaff08827557af4e3dc537c772c2a",
+  "files": {
+    "configs/qwen3_8_27b_b1g.yaml": "3b0015b22019814da53e92765aeea19bc65d2d4fd5580b1460883cbe611c59b8",
+    "configs/memory.yaml": "5e6690cbd74688b0c8bd8bebec09444dcf09512277d60d8d96968b891b4c030d",
+    "configs/evaluation.yaml": "ddc9611d101ae8e2ed6e64cadf5e188c9689d6a2b9e5f161e952737b6d009024",
+    "evals/tasks/b2/suite.yaml": "4a0bb28bb8662aa4e61deb70290f731f111dd2ba7e9bb3bfaf836afc4a055d6e",
+    "evals/tasks/b2/session_a/archive.txt": "d6f453ab67ce5747d70d182a42b9ecb2d398875b7e7ef8266ba1ef58ec02c8a4",
+    "evals/tasks/b2/session_a/launch_archive.txt": "692e99f9d49e762bac1b7dd8d4793e67903a985e39467828c6e6c5721df2e736",
+    "evals/tasks/b2/session_a/navigation_new.txt": "43887ef8132d4dad25910d8cf5dc92f37d813f5676e2915dad726c6297f08260",
+    "evals/tasks/b2/session_a/navigation_old.txt": "e074ae9652d48f93c2194fd859a0c511de6e5cc9e26596df460aa44d2a52df15",
+    "evals/tasks/b2/session_a/observatory.txt": "81034256f79ce60fa4c7f7610f2b38e646826dc108083f25e2791cd24bc8ff2e",
+    "evals/tasks/b2/session_a/orchard.txt": "3fa7e7b211ce76ffbe7a3849cbdffe2d3bad15a1b60a6268c52476bb0e71ad46",
+    "evals/tasks/b2/session_a/solstice.txt": "a4aeac3bce12f92d0e9f735c82a61d799ceec2846b2ea241ba06f7e3ae5b1e4e"
+  }
+}

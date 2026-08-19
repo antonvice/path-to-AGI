@@ -1,0 +1,2 @@
+navigation_mode: COASTAL-118
+valid_at: 2026-07-01

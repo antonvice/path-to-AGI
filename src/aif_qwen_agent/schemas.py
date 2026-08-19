@@ -1346,6 +1346,7 @@ class EpisodeWriteResult(BaseModel):
 class EpisodicRetrievalQuery(BaseModel):
     text: str = Field(min_length=1)
     limit: int = Field(default=5, ge=1, le=50)
+    minimum_match_terms: int = Field(default=1, ge=1, le=20)
 
 
 class EpisodicRetrievalHit(BaseModel):

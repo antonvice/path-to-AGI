@@ -149,6 +149,26 @@ def test_irrelevant_and_punctuation_only_queries_return_no_hits(tmp_path: Path) 
     assert not store.retrieve(EpisodicRetrievalQuery(text="***")).hits
 
 
+def test_minimum_match_terms_filters_weak_lexical_overlap(tmp_path: Path) -> None:
+    store = EpisodicMemoryStore(tmp_path / "memory.db")
+    store.add(
+        create_episode(
+            Task(id="beacon", text="Remember the project beacon."),
+            "LANTERN-583",
+            [evidence("beacon", "project_beacon: LANTERN-583")],
+        )
+    )
+
+    result = store.retrieve(
+        EpisodicRetrievalQuery(
+            text="project telescope status",
+            minimum_match_terms=2,
+        )
+    )
+
+    assert not result.hits
+
+
 def test_unknown_schema_version_is_rejected(tmp_path: Path) -> None:
     path = tmp_path / "memory.db"
     EpisodicMemoryStore(path)

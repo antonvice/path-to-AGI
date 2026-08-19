@@ -1,0 +1,2 @@
+navigation_mode: INLAND-907
+valid_at: 2026-07-01

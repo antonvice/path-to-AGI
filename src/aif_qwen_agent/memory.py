@@ -21,6 +21,22 @@ from aif_qwen_agent.schemas import (
 
 _SCHEMA_VERSION = "1"
 _WORD = re.compile(r"[a-z0-9]+")
+_STOP_WORDS = {
+    "a",
+    "an",
+    "and",
+    "for",
+    "from",
+    "in",
+    "is",
+    "of",
+    "on",
+    "the",
+    "to",
+    "was",
+    "what",
+    "which",
+}
 
 
 def create_episode(
@@ -211,8 +227,12 @@ class EpisodicMemoryStore:
         return len(rows)
 
     def retrieve(self, query: EpisodicRetrievalQuery) -> EpisodicRetrievalResult:
-        terms = tuple(dict.fromkeys(_WORD.findall(query.text.casefold())))
-        if not terms:
+        terms = tuple(
+            term
+            for term in dict.fromkeys(_WORD.findall(query.text.casefold()))
+            if term not in _STOP_WORDS
+        )
+        if len(terms) < query.minimum_match_terms:
             return EpisodicRetrievalResult(query=query, hits=[])
         match = " OR ".join(f'"{term}"' for term in terms)
         with self._connection() as connection:
@@ -226,18 +246,22 @@ class EpisodicMemoryStore:
                 ORDER BY fts_rank ASC, episodes.created_at ASC, episodes.episode_id ASC
                 LIMIT ?
                 """,
-                (match, query.limit),
+                (match, query.limit * 8),
             ).fetchall()
         hits: list[EpisodicRetrievalHit] = []
-        for rank, row in enumerate(rows, start=1):
+        for row in rows:
             retrieval_terms = set(_WORD.findall(str(row["retrieval_text"]).casefold()))
             matched_terms = [term for term in terms if term in retrieval_terms]
+            if len(matched_terms) < query.minimum_match_terms:
+                continue
             hits.append(
                 EpisodicRetrievalHit(
-                    rank=rank,
+                    rank=len(hits) + 1,
                     score=max(-float(row["fts_rank"]), 0.0),
                     matched_terms=matched_terms,
                     episode=self._load_row(row),
                 )
             )
+            if len(hits) == query.limit:
+                break
         return EpisodicRetrievalResult(query=query, hits=hits)

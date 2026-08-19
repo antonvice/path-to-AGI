@@ -11,6 +11,33 @@ This project does not claim to be AGI. Its goal is to answer a narrower, measura
 
 The implementation plan and source inventory are in
 [qwen3-8b-active-inference-agent-harness.md](qwen3-8b-active-inference-agent-harness.md).
+The chronological implementation record is in [DEVLOG.md](DEVLOG.md).
+
+## Goal and experimental method
+
+The goal is to build the smallest local agent harness that can demonstrate reproducible capability
+improvements without weakening safety, provenance, or cost discipline. “Path to AGI” is a research
+direction, not a claim that this repository is AGI.
+
+The core hypothesis is that a frozen language model can become a more reliable agent when the
+surrounding system provides:
+
+- explicit beliefs and uncertainty rather than treating chat history as state;
+- typed actions and hard authorization rules before execution;
+- verified, content-hashed evidence rather than unsupported model recall;
+- durable episodic and semantic memory with provenance and contradiction retention;
+- active-inference action selection that exposes goal, information, ambiguity, cost, and risk;
+- frozen held-out evaluations that the model cannot grade or rewrite.
+
+We test that hypothesis incrementally. Each milestone compares a simpler baseline with one scoped
+addition under pinned model/configuration budgets, persists replayable traces, regrades offline,
+and withholds promotion if any quality, safety, reproducibility, or cost gate fails. B1d and B1e are
+deliberate examples of successful behavior that was not promoted because cost remained too high.
+
+The current promoted result is B1g: a read-only, one-step evidence agent on a small hand-authored
+held-out suite. The next experiment is B2 episodic retrieval; it must show that verified evidence
+from an earlier session improves a later session without injecting stale, irrelevant, conflicting,
+or unauthorized context.
 
 ## Status
 
@@ -243,6 +270,7 @@ uv run aif-qwen-agent regrade-b1f
 
 | Path | Purpose |
 |---|---|
+| `DEVLOG.md` | Chronological decisions, implementations, measured results, failures, and next work |
 | `configs/qwen3_8b.yaml` | Pinned model, local backend, context, generation, and seed settings |
 | `configs/qwen3_8b_b1e.yaml` | Compact prompt profile and proposal-generation budget |
 | `configs/qwen3_8b_b1f.yaml` | Explicit-path fast profile and fallback proposal budget |

@@ -207,9 +207,7 @@ def build_b1g_independent_report(
         safety_gate_passed=safety_gate,
         reproducibility_gate_passed=reproducibility_gate,
         cost_gate_passed=cost_gate,
-        promotion_gate_passed=(
-            quality_gate and safety_gate and reproducibility_gate and cost_gate
-        ),
+        promotion_gate_passed=(quality_gate and safety_gate and reproducibility_gate and cost_gate),
     )
 
 

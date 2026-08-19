@@ -33,11 +33,7 @@ def extract_explicit_file_path(text: str) -> str | None:
         return None
     candidates: list[str] = []
     for raw in text.split():
-        candidate = (
-            raw.strip("\"'`()[]{}<>")
-            .rstrip(",;:!?.")
-            .rstrip("\"'`()[]{}<>")
-        )
+        candidate = raw.strip("\"'`()[]{}<>").rstrip(",;:!?.").rstrip("\"'`()[]{}<>")
         path = PurePosixPath(candidate)
         if (
             not candidate

@@ -868,11 +868,7 @@ class B1gIndependentEvaluationReport(BaseModel):
             sum(suite.agent_passed_cases for suite in suites),
             sum(suite.safety_passed_cases for suite in suites),
             sum(suite.safety_violations for suite in suites),
-            sum(
-                case.instruction_following_violation
-                for suite in suites
-                for case in suite.cases
-            ),
+            sum(case.instruction_following_violation for suite in suites for case in suite.cases),
             sum(case.baseline_input_tokens for case in grounded),
             sum(case.baseline_output_tokens for case in grounded),
             sum(case.agent_input_tokens for case in grounded),
@@ -894,8 +890,7 @@ class B1gIndependentEvaluationReport(BaseModel):
         if actual != expected:
             raise ValueError("B1g independent aggregates do not match suites")
         if len(self.comparisons) != len(suites[0].cases) or any(
-            len(comparison.agent_run_ids) != self.process_count
-            for comparison in self.comparisons
+            len(comparison.agent_run_ids) != self.process_count for comparison in self.comparisons
         ):
             raise ValueError("B1g comparisons do not match independent processes")
         if [comparison.fixture_id for comparison in self.comparisons] != [
@@ -919,9 +914,7 @@ class B1gIndependentEvaluationReport(BaseModel):
             )
         ):
             raise ValueError("B1g independent timings do not match suites")
-        baseline_tokens = (
-            self.grounded_baseline_input_tokens + self.grounded_baseline_output_tokens
-        )
+        baseline_tokens = self.grounded_baseline_input_tokens + self.grounded_baseline_output_tokens
         agent_tokens = self.grounded_agent_input_tokens + self.grounded_agent_output_tokens
         if baseline_tokens == 0:
             raise ValueError("B1g grounded cost comparison requires nonzero B0 tokens")
@@ -929,8 +922,7 @@ class B1gIndependentEvaluationReport(BaseModel):
             self.agent_passed_runs / self.grounded_runs
             - self.baseline_passed_runs / self.grounded_runs,
             agent_tokens / baseline_tokens - 1.0,
-            self.grounded_agent_generation_seconds
-            / self.grounded_baseline_generation_seconds
+            self.grounded_agent_generation_seconds / self.grounded_baseline_generation_seconds
             - 1.0,
         )
         if any(

@@ -1,12 +1,35 @@
 # Qwen3-8B Active-Inference Agent Harness
 
-Status: implementation in progress; B1f engineering gate passed, held-out B1g validation pending
+Status: implementation in progress; B1g held-out three-process promotion gate passed 2026-08-19
 Audience: AI engineer, Python engineer, evaluation engineer
 Purpose: build and measure a general-purpose, continually improving agent harness without claiming that the initial system is AGI
 
 ## 1. Executive decision
 
 Use `Qwen/Qwen3-8B` as the first language, reasoning, and action-proposal model. Do not build a new transformer, SSM, or foundation model for version 1.
+
+B0-B1f remain immutable historical evidence for that model. B1g switches the active evaluation
+path to the Ollama tag `orcarouter/Qwen3.8-27B-Uncensored:iq4_xs`, pinned to digest
+`84e6355d6764e264ccdfe486243821e7000eaff08827557af4e3dc537c772c2a`. The adapter verifies the
+digest before generation; a moved tag is a hard failure.
+
+### B1g promotion evidence
+
+The B1g suite and model digest were frozen in Git before the first model call. Three independent
+harness processes (PIDs 41399, 42206, and 43865) each began after Ollama reported the model absent,
+then recorded cold load durations of 25.92s, 20.22s, and 23.25s. Across the resulting runs:
+
+- Grounded B0 passed 0/18; grounded B1 passed 18/18.
+- Safety passed 21/21 with zero safety or prompt-injection violations.
+- Actions, outputs, baseline outputs, statuses, tokens, rejection codes, evidence hashes, retries,
+  and grades agreed across all three processes.
+- Grounded token cost was 30.9% below B0 and grounded generation time was 88.7% below B0, against
+  the frozen +25% maximum increase.
+- Quality, safety, reproducibility, cost, and overall promotion gates passed.
+
+The aggregate and all linked traces are under `evals/baselines/b1g_qwen3_8_27b_ollama/`. Offline
+regrade report `0be93e0b-f37b-4066-86f7-8aa97f4e3c64` passed without a model call. This is evidence
+for the frozen B1g suite, not unrestricted generalization.
 
 The research contribution will be the harness around the model:
 

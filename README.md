@@ -1,11 +1,11 @@
-# Qwen3-8B Active-Inference Agent Harness
+# Active-Inference Agent Harness
 
 A research harness for testing whether explicit beliefs, hard symbolic constraints, and
 active-inference action selection improve a frozen language-model agent under equal budgets.
 
 This project does not claim to be AGI. Its goal is to answer a narrower, measurable question:
 
-> Under the same Qwen3-8B model and resource budget, does an explicit belief plus
+> Under the same frozen model and resource budget, does an explicit belief plus
 > active-inference controller choose better next actions and complete more held-out tasks than a
 > conventional tool-calling agent?
 
@@ -14,7 +14,9 @@ The implementation plan and source inventory are in
 
 ## Status
 
-The repository is implementation-ready and the local model path is verified.
+The B1g held-out promotion gate passed on 2026-08-19 with the digest-pinned Ollama model
+`orcarouter/Qwen3.8-27B-Uncensored:iq4_xs`. Historical B0-B1f evidence remains bound to the
+original Qwen3-8B Transformers/MPS configuration; it was not rewritten during the model switch.
 
 Working now:
 
@@ -40,6 +42,11 @@ Working now:
   stage-level cost attribution, and offline-verifiable optimization and promotion gates.
 - B1f explicit-path fast routing and lexical evidence projection with source-content hashes,
   model fallback for ambiguous tasks, and a passing one-run engineering cost gate.
+- Digest-verified Ollama inference for `orcarouter/Qwen3.8-27B-Uncensored:iq4_xs`, pinned to
+  `84e6355d6764e264ccdfe486243821e7000eaff08827557af4e3dc537c772c2a`.
+- B1g frozen held-out evaluation across three cold, independent harness processes, with hashed
+  per-process reports/traces, strict behavioral agreement, grounded-only cost comparison, and
+  fully offline regrading.
 - Typed schemas for beliefs, actions, predicted outcomes, truth bounds, and logical facts.
 - Transparent MVP active-inference score with separately logged terms.
 - Hard policy and logical filtering before action scoring.
@@ -50,10 +57,8 @@ Working now:
 
 Not implemented yet:
 
-- Independent-process cold-start benchmarking.
 - Sandboxed Python and test execution tools.
 - SQLite run, artifact, evaluation, and memory storage.
-- Independent-process held-out B1 validation and promotion.
 - Durable belief updates or semantic memory.
 - Calibrated world-model prediction.
 
@@ -92,7 +97,9 @@ contradiction. Neither can override hard authorization rules.
 ## Requirements
 
 - [`uv`](https://docs.astral.sh/uv/)
+- [Ollama](https://ollama.com/) 0.17.1 or newer for the current B1g model
 - Approximately 16 GB free for the official Qwen3-8B checkpoint
+- Approximately 16 GB for the current IQ4_XS Ollama model
 - Python 3.12, installed automatically by `uv`
 - Apple Silicon with 32 GB unified memory for this local configuration, or a suitable CUDA host
 
@@ -140,6 +147,15 @@ Expected final line:
 ```text
 READY
 ```
+
+Prepare and verify the current B1g model separately:
+
+```bash
+ollama pull orcarouter/Qwen3.8-27B-Uncensored:iq4_xs
+uv run aif-qwen-agent doctor --config configs/qwen3_8_27b_b1g.yaml
+```
+
+The doctor command must report the frozen digest above. A moved tag is rejected rather than used.
 
 ## Development checks
 
@@ -482,19 +498,40 @@ loading the model.
 This is a tuned, one-process engineering result. It passes the configured gates on the frozen B1d
 suite but is not evidence of held-out generalization, repeated-process latency, or promotion.
 
+## B1g held-out promotion result
+
+The suite and requested model digest were frozen in commit `6dbbae3` before any model call. The
+evaluator was fixed in commit `c5dc249`, then three fresh Python harness processes ran after an
+Ollama unload/absence check before each process.
+
+| Gate or metric | Result |
+|---|---:|
+| Independent process IDs | 41399, 42206, 43865 |
+| Cold model loads | 25.92s, 20.22s, 23.25s |
+| Grounded B0 | 0/18 |
+| Grounded B1 | 18/18 |
+| Safety | 21/21, zero violations |
+| Prompt-injection violations | 0 |
+| Strict cross-process reproducibility | PASS |
+| Grounded tokens | 1,656 vs 2,397 — 30.9% lower |
+| Grounded generation | 38.39s vs 338.38s — 88.7% lower |
+| Configured maximum cost increase | +25% |
+| Quality, safety, reproducibility, and cost gates | PASS |
+| Promotion gate | PASS |
+
+The immutable aggregate is
+`evals/baselines/b1g_qwen3_8_27b_ollama/report.json`. `regrade-b1g` verified every frozen input,
+suite report, B0/B1 trace, tool trace, model identity, process identity, comparison vector, and
+aggregate without loading the model. Ollama was empty after the run.
+
+This establishes promotion on the hand-authored B1g held-out suite. It does not establish broad
+generalization beyond that suite or compare model families independently of the harness.
+
 ## Next roadmap step
 
-B1g should validate the fast path before adding memory or additional tools:
-
-- Freeze an untuned held-out inventory covering quoted paths, root files, ambiguous multi-path
-  tasks, irrelevant lexical matches, small adversarial files, and every existing safety boundary.
-- Run at least three independent model processes so cold-start, memory pressure, output agreement,
-  fallback rate, and cost distributions remain visible.
-- Require 100% safety and prompt-injection resistance in every run, with grounded improvement over
-  B0 and median token and generation overhead no greater than 25%.
-- Keep B1d and B1f immutable; failures create a new experiment rather than rewriting evidence.
-
-Only after that held-out repeated gate passes should the roadmap advance to B2 episodic retrieval.
+Advance to B2 episodic retrieval: persist verified episodes, retrieve them in later sessions, and
+measure whether retrieval improves a newly frozen cross-session suite without safety, relevance,
+or cost regression. Keep B1d, B1f, and B1g immutable.
 
 ## Milestones
 
@@ -533,5 +570,5 @@ See the IBM project assessment in the
 
 ## License
 
-No project license has been selected yet. Model use is governed separately by the license included
-with the downloaded Qwen3-8B checkpoint.
+No project license has been selected yet. Model use is governed separately by each configured
+model's license.

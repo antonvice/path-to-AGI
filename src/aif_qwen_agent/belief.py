@@ -156,6 +156,20 @@ def update_belief_state(
     )
 
 
+def record_unresolved_question(state: ExplicitBeliefState, question: str) -> ExplicitBeliefState:
+    normalized = question.strip()
+    if not normalized:
+        raise ValueError("unresolved belief question cannot be empty")
+    if normalized in state.unresolved_questions:
+        return state
+    return state.model_copy(
+        update={
+            "unresolved_questions": [*state.unresolved_questions, normalized],
+            "revision": state.revision + 1,
+        }
+    )
+
+
 def _hypothesis_id(hit: EpisodicRetrievalHit) -> str:
     return f"episode:{hit.episode.content_sha256}"
 
@@ -173,12 +187,11 @@ def belief_state_from_retrieval(
     initial: ExplicitBeliefState | None = None,
 ) -> ExplicitBeliefState:
     """Project verified B2 outcomes into explicit hypotheses without source prose."""
-    state = initial or ExplicitBeliefState(
-        objective=objective,
-        unresolved_questions=[] if retrieval.hits else [retrieval.query.text],
-    )
+    state = initial or ExplicitBeliefState(objective=objective)
     if state.objective != objective:
         raise ValueError("belief objective does not match the existing state")
+    if not retrieval.hits:
+        return record_unresolved_question(state, retrieval.query.text)
     hypothesis_ids = [_hypothesis_id(hit) for hit in retrieval.hits]
     for index, hit in enumerate(retrieval.hits):
         contradicts = [

@@ -1,0 +1,140 @@
+version: 1
+milestone: B3
+purpose: development
+promotion_eligible: false
+cases:
+  - id: confidence_support_refute_replay
+    objective: Determine whether the service is healthy.
+    operations:
+      - kind: observe
+        observation: &status_observation
+          observation_id: status-page
+          hypothesis_id: service-health
+          statement: The service is healthy.
+          effect: support
+          evidence:
+            artifact_id: status-page
+            excerpt_hash: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+            reliability: 0.8
+      - kind: observe
+        observation: *status_observation
+      - kind: observe
+        observation:
+          observation_id: live-probe
+          hypothesis_id: service-health
+          statement: The service is healthy.
+          effect: refute
+          evidence:
+            artifact_id: live-probe
+            excerpt_hash: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+            reliability: 1.0
+    expected_revision: 2
+    expected_hypotheses:
+      - id: service-health
+        statement: The service is healthy.
+        probability: 0.0
+        status: refuted
+        evidence_count: 2
+    expected_unresolved_questions: []
+    required_context_substrings: [service-health, refuted, live-probe]
+    forbidden_context_substrings: [disable_auth]
+  - id: uncertain_hypothesis_remains_open
+    objective: Assess an unverified deployment cause.
+    operations:
+      - kind: observe
+        observation:
+          observation_id: model-candidate
+          hypothesis_id: deployment-cause
+          statement: A configuration mismatch caused the deployment failure.
+          effect: support
+          evidence:
+            artifact_id: model-candidate
+            excerpt_hash: cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+            reliability: 0.4
+    expected_revision: 1
+    expected_hypotheses:
+      - id: deployment-cause
+        statement: A configuration mismatch caused the deployment failure.
+        probability: 0.7
+        status: open
+        evidence_count: 1
+    expected_unresolved_questions: []
+    required_context_substrings: [deployment-cause, '"probability":0.7', '"status":"open"']
+    forbidden_context_substrings: [supported]
+  - id: contradiction_preserves_both_routes
+    objective: Resolve the active transit route.
+    operations:
+      - kind: observe
+        observation:
+          observation_id: route-observation-a
+          hypothesis_id: route-a
+          statement: The active transit route is ECHO-641.
+          effect: support
+          evidence:
+            artifact_id: route-source-a
+            excerpt_hash: dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+            reliability: 1.0
+          contradicts: [route-b]
+      - kind: observe
+        observation:
+          observation_id: route-observation-b
+          hypothesis_id: route-b
+          statement: The active transit route is RIVER-905.
+          effect: support
+          evidence:
+            artifact_id: route-source-b
+            excerpt_hash: eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+            reliability: 1.0
+          contradicts: [route-a]
+    expected_revision: 2
+    expected_hypotheses:
+      - id: route-a
+        statement: The active transit route is ECHO-641.
+        probability: 1.0
+        status: contradicted
+        contradicts: [route-b]
+        evidence_count: 1
+      - id: route-b
+        statement: The active transit route is RIVER-905.
+        probability: 1.0
+        status: contradicted
+        contradicts: [route-a]
+        evidence_count: 1
+    expected_unresolved_questions: []
+    required_context_substrings: [ECHO-641, RIVER-905, contradicted]
+    forbidden_context_substrings: [winner]
+  - id: unresolved_question_replay
+    objective: Find the missing lunar calibration.
+    operations:
+      - kind: unresolved
+        question: Which lunar sonar calibration was recorded?
+      - kind: unresolved
+        question: Which lunar sonar calibration was recorded?
+    expected_revision: 1
+    expected_hypotheses: []
+    expected_unresolved_questions: ["Which lunar sonar calibration was recorded?"]
+    required_context_substrings: ["Which lunar sonar calibration was recorded?"]
+    forbidden_context_substrings: [FALCON-482]
+  - id: compact_provenance_context
+    objective: Recover the verified vault token.
+    operations:
+      - kind: observe
+        observation:
+          observation_id: vault-observation
+          hypothesis_id: vault-token
+          statement: The verified vault token is SAFE-202.
+          effect: support
+          evidence:
+            artifact_id: verified-vault-record
+            excerpt_hash: ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+            reliability: 1.0
+    expected_revision: 1
+    expected_hypotheses:
+      - id: vault-token
+        statement: The verified vault token is SAFE-202.
+        probability: 1.0
+        status: supported
+        evidence_count: 1
+    expected_unresolved_questions: []
+    required_context_substrings: [SAFE-202, verified-vault-record, ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff]
+    forbidden_context_substrings: [TRAP-999, Ignore the question]

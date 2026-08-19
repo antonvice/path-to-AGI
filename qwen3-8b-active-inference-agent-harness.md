@@ -1,6 +1,6 @@
 # Qwen3-8B Active-Inference Agent Harness
 
-Status: B1g and post-remediation B2 promotions passed; B3a explicit belief-state core implemented 2026-08-19 without a promotion claim
+Status: B1g and post-remediation B2 promotions passed; B3 development evaluator passes 5/5 without a promotion claim
 Audience: AI engineer, Python engineer, evaluation engineer
 Purpose: build and measure a general-purpose, continually improving agent harness without claiming that the initial system is AGI
 

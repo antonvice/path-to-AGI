@@ -40,6 +40,7 @@ from aif_qwen_agent.b2_independent import (
     run_b2_processes,
     verify_b2_independent_report,
 )
+from aif_qwen_agent.b3_evaluation import evaluate_b3, load_b3_report, verify_b3_report
 from aif_qwen_agent.baseline import BaselineRunner
 from aif_qwen_agent.config import load_yaml
 from aif_qwen_agent.evaluation import (
@@ -713,6 +714,43 @@ def regrade_b2(report: Path = Path("artifacts/b2-independent/report.json")) -> N
         f"retrieval={'PASS' if result.retrieval_gate_passed else 'FAIL'} "
         f"repro={'PASS' if result.reproducibility_gate_passed else 'FAIL'} "
         f"cost={'PASS' if result.cost_gate_passed else 'FAIL'}"
+    )
+
+
+@app.command("eval-b3-dev")
+def eval_b3_dev(
+    fixtures: Path = Path("evals/tasks/b3_dev/suite.yaml"),
+    database: Path = Path("artifacts/b3-dev/beliefs.db"),
+    report: Path = Path("artifacts/b3-dev/report.json"),
+) -> None:
+    """Run the non-promotion deterministic B3 development suite."""
+    result = evaluate_b3(fixtures, database, report)
+    table = Table("Fixture", "Revision", "Hypotheses", "Context", "Persistence", "Gate")
+    for case in result.cases:
+        table.add_row(
+            case.fixture_id,
+            "PASS" if case.revision_passed else "FAIL",
+            "PASS" if case.hypotheses_passed else "FAIL",
+            "PASS" if case.context_passed else "FAIL",
+            "PASS" if case.persistence_passed else "FAIL",
+            "PASS" if case.passed else "FAIL",
+        )
+    console.print(table)
+    console.print(
+        f"[dim]development_gate={'PASS' if result.engineering_gate_passed else 'FAIL'} "
+        f"cases={result.passed_cases}/{len(result.cases)} report={report}[/dim]"
+    )
+
+
+@app.command("regrade-b3-dev")
+def regrade_b3_dev(report: Path = Path("artifacts/b3-dev/report.json")) -> None:
+    """Verify B3 development evidence without a model call."""
+    result = load_b3_report(report)
+    verify_b3_report(result)
+    console.print(
+        f"verified report={result.report_id} development_gate="
+        f"{'PASS' if result.engineering_gate_passed else 'FAIL'} "
+        f"cases={result.passed_cases}/{len(result.cases)} promotion_eligible=false"
     )
 
 

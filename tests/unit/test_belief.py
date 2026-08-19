@@ -11,6 +11,7 @@ from aif_qwen_agent.belief import (
     ExplicitBeliefState,
     belief_state_from_retrieval,
     belief_state_sha256,
+    record_unresolved_question,
     update_belief_state,
 )
 from aif_qwen_agent.context import render_belief_context
@@ -121,9 +122,19 @@ def test_no_retrieval_records_an_unresolved_question(tmp_path: Path) -> None:
 
     state = belief_state_from_retrieval("find calibration", memory.retrieve(query))
 
-    assert state.revision == 0
+    assert state.revision == 1
     assert not state.hypotheses
     assert state.unresolved_questions == [query.text]
+
+
+def test_unresolved_question_replay_is_idempotent() -> None:
+    initial = ExplicitBeliefState(objective="diagnose service")
+    updated = record_unresolved_question(initial, "Which dependency failed?")
+
+    assert updated.revision == 1
+    assert record_unresolved_question(updated, "Which dependency failed?") == updated
+    with pytest.raises(ValueError, match="cannot be empty"):
+        record_unresolved_question(updated, "  ")
 
 
 def test_belief_store_preserves_revisions_and_rejects_tampering(tmp_path: Path) -> None:

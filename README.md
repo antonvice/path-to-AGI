@@ -91,6 +91,8 @@ Working now:
   quality, safety, retrieval, reproducibility, and cost gates satisfied.
 - B3a explicit belief-state core with bounded deterministic updates, reciprocal contradiction
   links, content-addressed observation replay, compact provenance context, and append-only revisions.
+- Separate non-promotion B3 development evaluator with deterministic replay, artifact integrity,
+  offline regrading, and a passing five-case engineering result.
 - Typed schemas for beliefs, actions, predicted outcomes, truth bounds, and logical facts.
 - Transparent MVP active-inference score with separately logged terms.
 - Hard policy and logical filtering before action scoring.
@@ -307,6 +309,13 @@ uv run aif-qwen-agent regrade-b2-suite \
   --memory-traces artifacts/b2-dev/memory.jsonl
 ```
 
+Run and regrade the model-free B3 development suite:
+
+```bash
+uv run aif-qwen-agent eval-b3-dev
+uv run aif-qwen-agent regrade-b3-dev
+```
+
 ## Repository map
 
 | Path | Purpose |
@@ -327,6 +336,7 @@ uv run aif-qwen-agent regrade-b2-suite \
 | `src/aif_qwen_agent/context.py` | Compact provenance-only belief context for model consumption |
 | `src/aif_qwen_agent/b2_evaluation.py` | Two-session B2 runner, gates, traces, and offline regrade |
 | `src/aif_qwen_agent/b2_independent.py` | Cold-process orchestration and B2 promotion aggregation |
+| `src/aif_qwen_agent/b3_evaluation.py` | Non-promotion B3 state evaluator and offline regrade |
 | `src/aif_qwen_agent/agent.py` | Bounded one-step proposal, tool, answer, and trace lifecycle |
 | `src/aif_qwen_agent/b1_evaluation.py` | Shared-model B0/B1 quality, safety, and regrade pipeline |
 | `src/aif_qwen_agent/b1_reproducibility.py` | Repeated agreement, latency, memory, and cost gates |
@@ -340,6 +350,8 @@ uv run aif-qwen-agent regrade-b2-suite \
 | `evals/tasks/` | Versioned behavioral and safety fixtures |
 | `evals/tasks/b2_dev/` | Separate B2 precision, compact-context, and conflict development suite |
 | `evals/tasks/b2h/` | Frozen post-remediation B2 held-out suite and hash manifest |
+| `evals/tasks/b3_dev/` | B3 confidence, contradiction, replay, and context development cases |
+| `evals/development/b3_dev/` | Hash-bound B3 development report and belief revision database |
 | `tests/` | Unit, integration, behavioral, safety, and regression checks |
 | `scripts/` | Model smoke test and future evaluation/promotion entry points |
 
@@ -742,9 +754,16 @@ instead of allowing the newest value to overwrite the older one. No-hit retrieva
 unresolved question.
 
 Belief revisions are stored append-only in SQLite and verified against canonical SHA-256 payloads on
-every read. This is implementation evidence, not B3 promotion: the next checkpoint is a separate B3
-development suite measuring state accuracy, uncertainty updates, contradiction retention, replay, and
-whether explicit state improves evidence-sensitive behavior over the promoted B2 path.
+every read.
+
+The separate `b3_dev` evaluator now covers five scenarios: support/refute/replay, uncertain evidence,
+reciprocal contradiction, unresolved-question replay, and compact provenance context. All five pass
+exact revision, hypothesis, unresolved-question, context-safety, and persistence checks. Report
+`8ba1c026-5dea-428d-86f9-d52caf1c75eb` regrades entirely offline.
+
+This is development evidence, not B3 promotion. The next checkpoint is to connect explicit state to
+evidence-sensitive decisions and measure it against the promoted B2 path before designing a new frozen
+B3 held-out suite.
 
 ## Milestones
 

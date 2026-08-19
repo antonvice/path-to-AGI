@@ -408,6 +408,24 @@ evidence. The benchmark remains small and hand-authored. Next: B3 explicit belie
 This is a B3 implementation checkpoint, not promotion evidence. Next: build a separate B3 development
 suite and evaluator before freezing any B3 held-out benchmark.
 
+## 2026-08-19 — B3b deterministic development evaluator
+
+- Added a separate `evals/tasks/b3_dev/` suite explicitly marked `purpose: development` and
+  `promotion_eligible: false`; the loader rejects promotion metadata.
+- Added five sequential scenarios for confidence support/refute with replay, uncertain open
+  hypotheses, reciprocal contradictions, unresolved-question replay, and provenance-only context.
+- Implemented typed B3 operations, expected-state fixtures, per-case gates, append-only persistence,
+  report generation, deterministic replay, artifact hashing, and model-free offline regrading.
+- Added `eval-b3-dev` and `regrade-b3-dev` commands. Evaluation refuses to overwrite prior artifacts.
+- Added tests for the real suite, promotion-metadata rejection, overwrite refusal, database tampering,
+  and false report-gate claims.
+- Saved 12 state revisions across five isolated objectives in `evals/development/b3_dev/beliefs.db`.
+  Every revision, hypothesis, unresolved-question, context, and persistence gate passed 5/5.
+- Offline regrade verified report `8ba1c026-5dea-428d-86f9-d52caf1c75eb`; no model was called.
+
+This is engineering evidence only. Next: integrate explicit state into evidence-sensitive action or
+answer selection and compare that behavior against B2 before any B3 held-out freeze.
+
 ## Commit history
 
 | Commit | Milestone |
@@ -443,6 +461,8 @@ uv --cache-dir .uv-cache run aif-qwen-agent regrade-b2 \
   --report evals/baselines/b2_qwen3_8_27b_ollama/report.json
 uv --cache-dir .uv-cache run aif-qwen-agent regrade-b2 \
   --report evals/baselines/b2h_qwen3_8_27b_ollama/report.json
+uv --cache-dir .uv-cache run aif-qwen-agent regrade-b3-dev \
+  --report evals/development/b3_dev/report.json
 ```
 
 The offline regrade does not require or call the model.

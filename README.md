@@ -77,6 +77,9 @@ Working now:
 - Initial B2 episodic-memory layer with immutable verified episodes, content-addressed
   deduplication, schema-versioned SQLite/FTS5 storage, deterministic lexical retrieval,
   provenance-preserving context rendering, and payload/index corruption detection.
+- Frozen B2 two-session held-out suite plus a matched no-memory baseline, untrusted-context memory
+  runner, evidence-hash citations, deterministic quality/safety/retrieval/cost gates, typed traces,
+  and model-free offline regrading. The suite has not yet been run against the model.
 - Typed schemas for beliefs, actions, predicted outcomes, truth bounds, and logical facts.
 - Transparent MVP active-inference score with separately logged terms.
 - Hard policy and logical filtering before action scoring.
@@ -269,6 +272,14 @@ uv run aif-qwen-agent eval-b1f
 uv run aif-qwen-agent regrade-b1f
 ```
 
+The B2 evaluator is available, but its default command consumes the frozen held-out suite. Do not
+run it as an exploratory smoke test:
+
+```bash
+uv run aif-qwen-agent eval-b2
+uv run aif-qwen-agent regrade-b2
+```
+
 ## Repository map
 
 | Path | Purpose |
@@ -283,6 +294,7 @@ uv run aif-qwen-agent regrade-b1f
 | `configs/memory.yaml` | B2 SQLite path, schema version, retrieval backend, and default limit |
 | `src/aif_qwen_agent/schemas.py` | Typed beliefs, actions, predictions, and logical facts |
 | `src/aif_qwen_agent/memory.py` | Content-addressed verified episodes and SQLite FTS5 retrieval |
+| `src/aif_qwen_agent/b2_evaluation.py` | Two-session B2 runner, gates, traces, and offline regrade |
 | `src/aif_qwen_agent/agent.py` | Bounded one-step proposal, tool, answer, and trace lifecycle |
 | `src/aif_qwen_agent/b1_evaluation.py` | Shared-model B0/B1 quality, safety, and regrade pipeline |
 | `src/aif_qwen_agent/b1_reproducibility.py` | Repeated agreement, latency, memory, and cost gates |
@@ -562,7 +574,7 @@ generalization beyond that suite or compare model families independently of the 
 
 ## B2 episodic retrieval in progress
 
-The first B2 storage/retrieval slice is implemented without a model call:
+The B2 storage and single-process evaluation path is implemented without a held-out model call:
 
 - only schema-valid, completed, verified episodes can become retrieval candidates;
 - each episode retains task, outcome, evidence excerpt, source URI, full source SHA-256, and tags;
@@ -571,17 +583,27 @@ The first B2 storage/retrieval slice is implemented without a model call:
 - lexical retrieval is deterministic under fixed data/query inputs and returns provenance-rich
   ranked hits;
 - retrieved context is explicitly labeled untrusted data and carries episode/source hashes;
-- payload, metadata, index-text, count, and schema-version corruption fail closed.
+- payload, metadata, index-text, count, and schema-version corruption fail closed;
+- the frozen suite contains seven session-A episodes and six session-B cases: four grounded recall,
+  conflict, and adversarial-memory cases plus two relevance/abstention safety cases;
+- matched B0 and memory runners share one digest-pinned adapter and generation configuration;
+- a no-hit query abstains deterministically without calling the model;
+- typed JSONL traces bind the query, ranked episodes, context and prompt hashes, model result, and
+  evidence citations;
+- offline regrading reconstructs every case and aggregate from frozen inputs and traces;
+- a separate synthetic suite passes all gates and proves that tampered reports and adversarial
+  instruction following are detected.
 
-This is infrastructure, not B2 promotion. It has not yet been injected into the model path or run
-against a frozen two-session held-out suite.
+This is an implementation checkpoint, not B2 promotion. The frozen B2 suite has not yet been sent
+to the model.
 
 ## Next roadmap step
 
-Connect the verified store to a separate two-session B2 evaluator, define a no-memory baseline,
-freeze positive/irrelevant/conflicting/prompt-injection fixtures, and measure whether retrieval
-improves later-session answers without safety, provenance, relevance, reproducibility, or cost
-regression. Keep B1d, B1f, and B1g immutable.
+Wrap the B2 suite in the same cold independent-process discipline used for B1g, require at least
+three distinct harness process IDs and strict output/retrieval agreement, then run the frozen suite
+exactly once per process. Promote only if quality, safety, retrieval, reproducibility, and cost all
+pass; otherwise preserve the failure evidence and revise against a new development suite rather
+than tuning on held-out cases. Keep B1d, B1f, B1g, and the B2 freeze immutable.
 
 ## Milestones
 

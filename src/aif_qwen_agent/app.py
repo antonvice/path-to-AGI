@@ -28,6 +28,13 @@ from aif_qwen_agent.b1_reproducibility import (
     load_any_b1_report,
     verify_repeated_b1_report,
 )
+from aif_qwen_agent.b2_evaluation import (
+    B2MemoryTraceStore,
+    EpisodicMemoryRunner,
+    evaluate_b2,
+    load_b2_report,
+    verify_b2_report,
+)
 from aif_qwen_agent.baseline import BaselineRunner
 from aif_qwen_agent.config import load_yaml
 from aif_qwen_agent.evaluation import (
@@ -37,6 +44,7 @@ from aif_qwen_agent.evaluation import (
     verify_report,
     verify_reproducibility_report,
 )
+from aif_qwen_agent.memory import EpisodicMemoryStore
 from aif_qwen_agent.model_adapters import OllamaAdapter, TransformersAdapter
 from aif_qwen_agent.schemas import (
     B1RepeatedEvaluationReport,
@@ -181,6 +189,28 @@ def _build_b1_runners(
         prompt_profile=agent_settings.get("prompt_profile", "legacy"),
     )
     return baseline, agent
+
+
+def _build_b2_runners(
+    config: Path,
+    memory_db: Path,
+    baseline_traces: Path,
+    memory_traces: Path,
+) -> tuple[BaselineRunner, EpisodicMemoryRunner]:
+    settings = load_yaml(config)
+    model = _model_identity(settings)
+    generation = GenerationConfig.model_validate(settings["inference"])
+    adapter = _model_adapter(settings, model, generation)
+    return (
+        BaselineRunner(adapter, model, generation, TraceStore(baseline_traces)),
+        EpisodicMemoryRunner(
+            adapter,
+            model,
+            generation,
+            EpisodicMemoryStore(memory_db),
+            B2MemoryTraceStore(memory_traces),
+        ),
+    )
 
 
 @app.command()
@@ -545,6 +575,79 @@ def regrade_b1g(report: Path = Path("artifacts/b1g/report.json")) -> None:
         f"quality={'PASS' if result.quality_gate_passed else 'FAIL'} "
         f"safety={'PASS' if result.safety_gate_passed else 'FAIL'} "
         f"repro={'PASS' if result.reproducibility_gate_passed else 'FAIL'} "
+        f"cost={'PASS' if result.cost_gate_passed else 'FAIL'}"
+    )
+
+
+@app.command("eval-b2")
+def eval_b2(
+    fixtures: Path = Path("evals/tasks/b2/suite.yaml"),
+    freeze_manifest: Path = Path("evals/tasks/b2/freeze.json"),
+    config: Path = Path("configs/qwen3_8_27b_b1g.yaml"),
+    evaluation_config: Path = Path("configs/evaluation.yaml"),
+    memory_db: Path = Path("artifacts/b2/memory.db"),
+    baseline_traces: Path = Path("artifacts/b2/baseline.jsonl"),
+    memory_traces: Path = Path("artifacts/b2/memory.jsonl"),
+    report: Path = Path("artifacts/b2/report.json"),
+) -> None:
+    """Run the frozen two-session B2 episodic retrieval suite once."""
+    baseline, memory = _build_b2_runners(
+        config,
+        memory_db,
+        baseline_traces,
+        memory_traces,
+    )
+    result = evaluate_b2(
+        baseline,
+        memory,
+        fixtures,
+        freeze_manifest,
+        evaluation_config,
+        report,
+    )
+    table = Table("Fixture", "Kind", "B0", "Memory", "Retrieval", "Safety")
+    for case in result.cases:
+        table.add_row(
+            case.fixture_id,
+            case.kind,
+            "PASS" if case.baseline_passed else "FAIL",
+            "PASS" if case.memory_passed else "FAIL",
+            "PASS" if case.retrieval_passed else "FAIL",
+            "FAIL" if case.safety_violation else "PASS",
+        )
+    console.print(table)
+    console.print(
+        f"[dim]gate={'PASS' if result.engineering_gate_passed else 'FAIL'} "
+        f"quality={'PASS' if result.quality_gate_passed else 'FAIL'} "
+        f"safety={'PASS' if result.safety_gate_passed else 'FAIL'} "
+        f"retrieval={'PASS' if result.retrieval_gate_passed else 'FAIL'} "
+        f"cost={'PASS' if result.cost_gate_passed else 'FAIL'} "
+        f"quality_delta={result.quality_delta:.1%} "
+        f"grounded_token_cost={result.grounded_token_cost_increase:.1%} "
+        f"grounded_generation_cost={result.grounded_generation_cost_increase:.1%} "
+        f"report={report}[/dim]"
+    )
+
+
+@app.command("regrade-b2")
+def regrade_b2(
+    report: Path = Path("artifacts/b2/report.json"),
+    baseline_traces: Path = Path("artifacts/b2/baseline.jsonl"),
+    memory_traces: Path = Path("artifacts/b2/memory.jsonl"),
+) -> None:
+    """Verify B2 entirely from its frozen inputs and saved traces."""
+    result = load_b2_report(report)
+    verify_b2_report(
+        result,
+        TraceStore(baseline_traces),
+        B2MemoryTraceStore(memory_traces),
+    )
+    console.print(
+        f"verified report={result.report_id} "
+        f"gate={'PASS' if result.engineering_gate_passed else 'FAIL'} "
+        f"quality={'PASS' if result.quality_gate_passed else 'FAIL'} "
+        f"safety={'PASS' if result.safety_gate_passed else 'FAIL'} "
+        f"retrieval={'PASS' if result.retrieval_gate_passed else 'FAIL'} "
         f"cost={'PASS' if result.cost_gate_passed else 'FAIL'}"
     )
 

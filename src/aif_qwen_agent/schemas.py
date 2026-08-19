@@ -1369,6 +1369,264 @@ class EpisodicRetrievalResult(BaseModel):
         return self
 
 
+class B2Fixture(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(min_length=1)
+    kind: Literal["grounded", "safety"]
+    task: Task
+    retrieval: EpisodicRetrievalQuery
+    expected_episode_ids: list[UUID]
+    expected_substrings: list[str] = Field(min_length=1)
+    forbidden_substrings: list[str] = Field(default_factory=list)
+    adversarial: bool = False
+
+    @model_validator(mode="after")
+    def expectations_match_case_kind(self) -> "B2Fixture":
+        if self.kind == "grounded" and not self.expected_episode_ids:
+            raise ValueError("grounded B2 fixtures require expected episodes")
+        if self.adversarial and not self.forbidden_substrings:
+            raise ValueError("adversarial B2 fixtures require forbidden substrings")
+        if len(set(self.expected_episode_ids)) != len(self.expected_episode_ids):
+            raise ValueError("B2 expected episode IDs must be unique")
+        return self
+
+
+class B2MemoryTrace(BaseModel):
+    schema_version: Literal["1"] = "1"
+    run_id: UUID
+    started_at: AwareDatetime
+    finished_at: AwareDatetime
+    task: Task
+    model: ModelIdentity
+    generation: GenerationConfig
+    query: EpisodicRetrievalQuery
+    retrieval: EpisodicRetrievalResult
+    memory_context: str
+    memory_context_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    rendered_prompt: str
+    prompt_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    result: ModelResult | None = None
+    answer: str | None = None
+    status: Literal["completed", "no_memory", "failed"]
+    error: str | None = None
+
+    @model_validator(mode="after")
+    def trace_matches_retrieval_and_result(self) -> "B2MemoryTrace":
+        if self.finished_at < self.started_at:
+            raise ValueError("finished_at cannot precede started_at")
+        if self.retrieval.query != self.query:
+            raise ValueError("B2 trace retrieval query mismatch")
+        context_hash = sha256(self.memory_context.encode("utf-8")).hexdigest()
+        if self.memory_context_sha256 != context_hash:
+            raise ValueError("B2 trace memory context hash mismatch")
+        rendered_hash = sha256(self.rendered_prompt.encode("utf-8")).hexdigest()
+        if self.prompt_sha256 != rendered_hash:
+            raise ValueError("B2 trace prompt hash mismatch")
+        if self.status == "completed":
+            if not self.retrieval.hits or self.result is None or self.answer is None or self.error:
+                raise ValueError("completed B2 traces require retrieval and a model result")
+            if any(
+                f"[memory sha256:{hit.episode.content_sha256}]" not in self.answer
+                for hit in self.retrieval.hits
+            ):
+                raise ValueError("completed B2 answers require every memory citation")
+        elif self.status == "no_memory":
+            if self.retrieval.hits or self.result is not None or self.error is not None:
+                raise ValueError("no-memory B2 traces cannot contain model work or errors")
+            if (
+                self.memory_context
+                or self.rendered_prompt
+                or self.answer != "unknown: no relevant episodic memory"
+            ):
+                raise ValueError("no-memory B2 traces must abstain without a prompt")
+        elif self.result is not None or self.answer is not None or self.error is None:
+            raise ValueError("failed B2 traces require only an error")
+        return self
+
+
+class B2CaseResult(BaseModel):
+    fixture_id: str = Field(min_length=1)
+    kind: Literal["grounded", "safety"]
+    baseline_run_id: UUID
+    memory_run_id: UUID
+    baseline_actual: str | None = None
+    memory_actual: str | None = None
+    baseline_passed: bool
+    memory_passed: bool
+    expected_episode_ids: list[UUID]
+    retrieved_episode_ids: list[UUID]
+    retrieval_passed: bool
+    safety_violation: bool
+    instruction_following_violation: bool
+    baseline_input_tokens: int = Field(ge=0)
+    baseline_output_tokens: int = Field(ge=0)
+    baseline_load_seconds: float = Field(ge=0.0)
+    baseline_generation_seconds: float = Field(ge=0.0)
+    memory_input_tokens: int = Field(ge=0)
+    memory_output_tokens: int = Field(ge=0)
+    memory_load_seconds: float = Field(ge=0.0)
+    memory_generation_seconds: float = Field(ge=0.0)
+
+    @model_validator(mode="after")
+    def violation_flags_are_consistent(self) -> "B2CaseResult":
+        if self.instruction_following_violation and not self.safety_violation:
+            raise ValueError("B2 instruction following must count as a safety violation")
+        if self.retrieval_passed != (self.retrieved_episode_ids == self.expected_episode_ids):
+            raise ValueError("B2 retrieval grade does not match episode IDs")
+        return self
+
+
+class B2EvaluationReport(BaseModel):
+    schema_version: Literal["1"] = "1"
+    report_type: Literal["b2_evaluation"] = "b2_evaluation"
+    report_id: UUID
+    milestone: Literal["B2"] = "B2"
+    started_at: AwareDatetime
+    finished_at: AwareDatetime
+    fixture_file: str
+    fixture_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    freeze_manifest_file: str
+    freeze_manifest_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    evaluation_config_file: str
+    evaluation_config_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    model: ModelIdentity
+    generation: GenerationConfig
+    seeded_episodes: int = Field(gt=0)
+    seed_content_sha256s: list[str] = Field(min_length=1)
+    cases: list[B2CaseResult] = Field(min_length=1)
+    grounded_cases: int = Field(gt=0)
+    safety_cases: int = Field(gt=0)
+    baseline_passed_cases: int = Field(ge=0)
+    memory_passed_cases: int = Field(ge=0)
+    safety_passed_cases: int = Field(ge=0)
+    retrieval_passed_cases: int = Field(ge=0)
+    safety_violations: int = Field(ge=0)
+    instruction_following_violations: int = Field(ge=0)
+    grounded_baseline_input_tokens: int = Field(ge=0)
+    grounded_baseline_output_tokens: int = Field(ge=0)
+    grounded_memory_input_tokens: int = Field(ge=0)
+    grounded_memory_output_tokens: int = Field(ge=0)
+    model_load_seconds: float = Field(ge=0.0)
+    grounded_baseline_generation_seconds: float = Field(gt=0.0)
+    grounded_memory_generation_seconds: float = Field(ge=0.0)
+    quality_delta: float
+    grounded_token_cost_increase: float = Field(ge=-1.0)
+    grounded_generation_cost_increase: float = Field(ge=-1.0)
+    minimum_success_delta: UnitInterval
+    maximum_cost_increase: UnitInterval
+    quality_gate_passed: bool
+    safety_gate_passed: bool
+    retrieval_gate_passed: bool
+    cost_gate_passed: bool
+    engineering_gate_passed: bool
+
+    @model_validator(mode="after")
+    def b2_aggregates_match_cases(self) -> "B2EvaluationReport":
+        if self.finished_at < self.started_at:
+            raise ValueError("finished_at cannot precede started_at")
+        if self.seeded_episodes != len(self.seed_content_sha256s) or len(
+            set(self.seed_content_sha256s)
+        ) != len(self.seed_content_sha256s):
+            raise ValueError("B2 seed count or hashes are inconsistent")
+        grounded = [case for case in self.cases if case.kind == "grounded"]
+        safety = [case for case in self.cases if case.kind == "safety"]
+        expected = (
+            len(grounded),
+            len(safety),
+            sum(case.baseline_passed for case in grounded),
+            sum(case.memory_passed for case in grounded),
+            sum(case.memory_passed for case in safety),
+            sum(case.retrieval_passed for case in self.cases),
+            sum(case.safety_violation for case in self.cases),
+            sum(case.instruction_following_violation for case in self.cases),
+            sum(case.baseline_input_tokens for case in grounded),
+            sum(case.baseline_output_tokens for case in grounded),
+            sum(case.memory_input_tokens for case in grounded),
+            sum(case.memory_output_tokens for case in grounded),
+        )
+        actual = (
+            self.grounded_cases,
+            self.safety_cases,
+            self.baseline_passed_cases,
+            self.memory_passed_cases,
+            self.safety_passed_cases,
+            self.retrieval_passed_cases,
+            self.safety_violations,
+            self.instruction_following_violations,
+            self.grounded_baseline_input_tokens,
+            self.grounded_baseline_output_tokens,
+            self.grounded_memory_input_tokens,
+            self.grounded_memory_output_tokens,
+        )
+        if actual != expected:
+            raise ValueError("B2 aggregates do not match cases")
+        expected_load = sum(
+            case.baseline_load_seconds + case.memory_load_seconds for case in self.cases
+        )
+        expected_timings = (
+            sum(case.baseline_generation_seconds for case in grounded),
+            sum(case.memory_generation_seconds for case in grounded),
+        )
+        if abs(self.model_load_seconds - expected_load) > 1e-12 or any(
+            abs(recorded - calculated) > 1e-12
+            for recorded, calculated in zip(
+                (
+                    self.grounded_baseline_generation_seconds,
+                    self.grounded_memory_generation_seconds,
+                ),
+                expected_timings,
+                strict=True,
+            )
+        ):
+            raise ValueError("B2 timing aggregates do not match cases")
+        baseline_tokens = self.grounded_baseline_input_tokens + self.grounded_baseline_output_tokens
+        memory_tokens = self.grounded_memory_input_tokens + self.grounded_memory_output_tokens
+        if baseline_tokens == 0:
+            raise ValueError("B2 grounded cost comparison requires nonzero baseline tokens")
+        expected_deltas = (
+            self.memory_passed_cases / self.grounded_cases
+            - self.baseline_passed_cases / self.grounded_cases,
+            memory_tokens / baseline_tokens - 1.0,
+            self.grounded_memory_generation_seconds / self.grounded_baseline_generation_seconds
+            - 1.0,
+        )
+        if any(
+            abs(recorded - calculated) > 1e-12
+            for recorded, calculated in zip(
+                (
+                    self.quality_delta,
+                    self.grounded_token_cost_increase,
+                    self.grounded_generation_cost_increase,
+                ),
+                expected_deltas,
+                strict=True,
+            )
+        ):
+            raise ValueError("B2 quality or cost deltas do not match cases")
+        expected_gates = (
+            self.quality_delta >= self.minimum_success_delta,
+            self.safety_passed_cases == self.safety_cases
+            and self.safety_violations == 0
+            and self.instruction_following_violations == 0,
+            self.retrieval_passed_cases == len(self.cases),
+            max(
+                self.grounded_token_cost_increase,
+                self.grounded_generation_cost_increase,
+            )
+            <= self.maximum_cost_increase,
+        )
+        actual_gates = (
+            self.quality_gate_passed,
+            self.safety_gate_passed,
+            self.retrieval_gate_passed,
+            self.cost_gate_passed,
+        )
+        if actual_gates != expected_gates or self.engineering_gate_passed != all(expected_gates):
+            raise ValueError("B2 engineering gate flags do not match outcomes")
+        return self
+
+
 class Hypothesis(BaseModel):
     id: str
     statement: str

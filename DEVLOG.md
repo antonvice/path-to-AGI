@@ -185,7 +185,7 @@ Commit: `c5dc249` — `Add digest-verified B1g independent process gate`
 
 Commit: `7d480e2` — `Record passing B1g held-out promotion`
 
-## 2026-08-19 — B2 episodic retrieval started
+## 2026-08-19 — B2 episodic retrieval implementation
 
 - Added typed episode evidence, immutable episode, write-result, retrieval-query, retrieval-hit,
   and retrieval-result schemas.
@@ -203,9 +203,40 @@ Commit: `7d480e2` — `Record passing B1g held-out promotion`
   rejection, payload tampering, FTS tampering, contradiction retention, irrelevant queries, and
   unsupported schema versions.
 
-This is the first B2 implementation slice, not a promotion result. Model context injection, a
-matched no-memory baseline, frozen two-session fixtures, independent-process evaluation, and cost
-gates remain next.
+Commit: `c8fb951` — `Add verified B2 episodic retrieval store`
+
+### Freeze before model inference
+
+- Added a generic minimum matched-term threshold and stopword filtering before defining held-out
+  cases, preventing weak lexical overlap from silently becoming relevant context.
+- Froze seven verified session-A episodes and six session-B cases before a B2 model call: four
+  grounded cases covering direct recall, adversarial memory, and conflicting evidence, plus two
+  safety cases covering irrelevant memory and weak overlap.
+- Bound the suite, all source files, memory/evaluation configuration, requested Ollama model, and
+  exact digest in a SHA-256 manifest.
+- Verified every source hash and exact evidence excerpt. No B2 held-out model inference occurred.
+
+Commit: `3a9828f` — `Freeze B2 two-session retrieval suite`
+
+### Two-session evaluator
+
+- Added a matched answer-only baseline and an episodic runner sharing the same model adapter and
+  generation settings.
+- Marked retrieved memory as untrusted data, required conflict reporting, appended every selected
+  episode's content hash as a citation, and made no-hit abstention deterministic without a model
+  call.
+- Persisted typed B2 traces containing retrieval queries, ranked verified episodes, context and
+  prompt hashes, token/load/generation metrics, model output, citations, status, and errors.
+- Added deterministic quality, safety, instruction-following, exact-retrieval, and grounded-cost
+  gates with report reconstruction from frozen inputs and JSONL traces.
+- Added `eval-b2` and `regrade-b2` commands.
+- Built a separate synthetic five-case suite. It passes end to end, invokes the model only for
+  relevant memory, regrades offline, rejects report tampering, and fails the safety gate when a
+  fake model follows an instruction embedded in memory.
+- Passed 87 tests, Ruff formatting/lint, and strict mypy. The frozen held-out suite remains unused.
+
+This is still not a B2 promotion result. A three-process cold evaluator must be implemented and
+validated before the first held-out model call.
 
 ## What the project has established
 
@@ -219,7 +250,8 @@ gates remain next.
 ## Known limitations
 
 - The agent remains one-step and has only a read-only file tool.
-- There is no durable episodic or semantic memory yet.
+- Episodic memory is limited to the B2 verified SQLite/FTS5 path; semantic and procedural memory
+  are not implemented.
 - Belief schemas and AIF scoring exist, but are not yet integrated into a multi-step controller.
 - There is no sandboxed Python/test runner, network tool, or external-write capability.
 - The benchmark inventory is small and hand-authored.
@@ -227,36 +259,20 @@ gates remain next.
   controlled model-family comparison.
 - Local timing remains sensitive to memory pressure and host load.
 
-## Next: B2 episodic retrieval
+## Next: B2 independent-process evaluation
 
-B2 will test whether verified evidence from an earlier session can improve a later session without
-quietly introducing stale, irrelevant, or unsafe context.
+The single-process B2 path is complete, but using it directly would spend held-out evidence before
+the reproducibility gate exists. The next implementation must:
 
-Planned implementation order:
+1. launch at least three cold, independent harness processes with distinct PIDs;
+2. require Ollama to be unloaded before each process and record positive cold-load evidence;
+3. isolate each process's SQLite database, baseline traces, memory traces, and suite report;
+4. hash every per-process artifact and enforce exact case, retrieval, safety, and output agreement;
+5. aggregate grounded quality and cost without letting safety abstentions hide model expense;
+6. support a complete offline regrade from the B2 freeze, process reports, and traces;
+7. run the held-out suite only after that infrastructure passes synthetic tests.
 
-1. Define immutable episode, evidence-reference, retrieval-query, and retrieval-result schemas.
-2. Add a local SQLite store with schema versioning and content hashes.
-3. Persist only completed, verified episodes; rejected, failed, and unverified observations remain
-   auditable but are not retrieval candidates.
-4. Implement deterministic lexical retrieval first. Add embeddings only if the benchmark shows a
-   measurable gap.
-5. Record query text, candidate IDs, scores, selected evidence, source hashes, and retrieval cost.
-6. Build a two-session evaluator: session A records verified evidence; session B must recover and
-   use it while matched B0 has no memory.
-7. Freeze positive, irrelevant, stale/conflicting, prompt-injection, and authorization-boundary
-   cases before running the model.
-8. Require better held-out cross-session success, 100% safety, exact provenance, reproducibility,
-   and cost within the configured ceiling before B2 promotion.
-
-Initial definition of done:
-
-- SQLite migrations and repository-local database configuration exist.
-- Episode writes are typed, transactional, content-hashed, and replayable.
-- Retrieval is deterministic under fixed inputs and excludes unverified episodes.
-- Unit tests cover persistence, duplicate content, corruption, irrelevant retrieval, and
-  contradiction retention.
-- A synthetic end-to-end test proves store → retrieve → evidence-cited answer.
-- No B2 promotion claim is made until a new suite is frozen and independently evaluated.
+No B2 promotion claim is made until the independent held-out result passes every configured gate.
 
 ## Commit history
 
@@ -272,6 +288,8 @@ Initial definition of done:
 | `6dbbae3` | Frozen B1g held-out suite and Ollama digest |
 | `c5dc249` | Three-process B1g evaluator |
 | `7d480e2` | Passing B1g promotion evidence |
+| `c8fb951` | Verified B2 episodic memory store |
+| `3a9828f` | Frozen B2 two-session held-out suite |
 
 ## Reproduce the current checks
 

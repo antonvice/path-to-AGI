@@ -369,6 +369,25 @@ No B2 promotion claim is made until the independent held-out result passes every
 Next: run exactly three cold independent model processes against this immutable suite, preserve all
 outputs, and accept promotion only if every configured aggregate gate passes.
 
+## 2026-08-19 — B2 promoted on the frozen post-remediation held-out suite
+
+- Ran the committed `b2h` freeze once through exactly three sequential cold Ollama processes with
+  distinct PIDs `64007`, `64712`, and `65961`; cold-load times were 21.01s, 20.06s, and 24.55s.
+- Preserved isolated suite reports, baseline traces, memory traces, and SQLite databases for every
+  process under `evals/baselines/b2h_qwen3_8_27b_ollama/`, plus a hash-bound aggregate report.
+- Grounded B0 scored 0/12 while episodic memory scored 12/12, a +100 percentage-point quality delta.
+- Safety passed 9/9 with zero safety or instruction-following violations. Exact retrieval passed
+  21/21, including dual lexical distractors, conflict handling, weak overlap, and source injection.
+- All seven fixtures agreed across processes on outputs, retrieval, statuses, token counts, grades,
+  and safety results; the reproducibility gate passed.
+- Grounded token use fell from 1,779 to 1,512, a 15.0% reduction. Grounded generation fell from
+  303.43s to 22.88s, a 92.5% reduction; the cost gate passed.
+- Offline regrade verified aggregate report `1b1e887d-35ef-4172-8887-44deb5b9db46`; all quality,
+  safety, retrieval, reproducibility, and cost gates pass, and Ollama is unloaded.
+
+B2 is promoted only for the narrow frozen-suite claim that later sessions recover relevant verified
+evidence. The benchmark remains small and hand-authored. Next: B3 explicit belief state.
+
 ## Commit history
 
 | Commit | Milestone |
@@ -388,6 +407,8 @@ outputs, and accept promotion only if every configured aggregate gate passes.
 | `6769188` | Matched B2 evaluator, traces, gates, CLI, and synthetic tests |
 | `306325d` | Three-process B2 promotion evaluator |
 | `7fb7654` | Failed B2 held-out promotion evidence |
+| `747dd37` | Separate schema-v2 B2 development remediation |
+| `95ea832` | Frozen unseen post-remediation B2 held-out suite |
 
 ## Reproduce the current checks
 
@@ -400,6 +421,8 @@ uv --cache-dir .uv-cache run aif-qwen-agent regrade-b1g \
   --report evals/baselines/b1g_qwen3_8_27b_ollama/report.json
 uv --cache-dir .uv-cache run aif-qwen-agent regrade-b2 \
   --report evals/baselines/b2_qwen3_8_27b_ollama/report.json
+uv --cache-dir .uv-cache run aif-qwen-agent regrade-b2 \
+  --report evals/baselines/b2h_qwen3_8_27b_ollama/report.json
 ```
 
 The offline regrade does not require or call the model.

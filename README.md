@@ -81,12 +81,14 @@ Working now:
   and model-free offline regrading.
 - B2 cold independent-process gate with isolated databases/traces, distinct process IDs, per-file
   hashes, strict output/retrieval/token/grade agreement, and aggregate offline regrading.
-- Preserved three-process B2 held-out evidence: quality and safety passed, but exact retrieval and
-  token cost failed, so B2 remains unpromoted.
+- Preserved the original failed three-process B2 held-out evidence: quality and safety passed, but
+  exact retrieval and token cost failed.
 - Separate non-promotion `b2_dev` suite with schema-v2 precision filtering, compact outcome-only
   context, deterministic conflict resolution, and a passing one-process engineering result.
 - Newly frozen, inference-naive `b2h` held-out suite with unseen facts, dual lexical distractors,
   adversarial source prose, deterministic conflicts, and three abstention controls.
+- Passing three-cold-process `b2h` promotion evidence with exact behavioral agreement and all
+  quality, safety, retrieval, reproducibility, and cost gates satisfied.
 - Typed schemas for beliefs, actions, predicted outcomes, truth bounds, and logical facts.
 - Transparent MVP active-inference score with separately logged terms.
 - Hard policy and logical filtering before action scoring.
@@ -689,22 +691,38 @@ The digest-pinned one-process development run produced:
 Report `9352f332-594e-43ee-b6bc-13633db3bd9e` regraded offline. This is development evidence only,
 not a reversal of the failed B2 held-out result and not a promotion claim.
 
-## B2 post-remediation held-out freeze
+## B2 post-remediation held-out result
 
 `evals/tasks/b2h/` is frozen before any model inference. It contains eight unseen episodes and
 seven cases: four grounded cases, including dual lexical distractors and a two-record conflict,
 plus three safety cases for irrelevant memory, weak overlap, and source-injection lookup. Episode
 IDs, outcomes, source files, and code values are disjoint from both `b2` and `b2_dev`.
 
-The manifest binds the suite and every source, schema-v2 memory settings, evaluation and model
+The freeze manifest binds the suite and every source, schema-v2 memory settings, evaluation and model
 configs, exact Ollama model digest, and the schemas, retrieval, evaluation, and independent-process
 evaluator source files. Offline validation confirmed exact expected retrieval for all seven cases
 and no searchable hit for the injected `MIRAGE-000` evidence term. No model process or generation
 command was run while designing or freezing this suite.
 
-Next, run the existing evaluator in exactly three cold independent processes and preserve all
-artifacts whether the result passes or fails. B2 remains unpromoted until quality, safety, exact
-retrieval, reproducibility, and cost pass together.
+The committed freeze was then evaluated once through exactly three cold independent processes.
+Every process passed its suite gate, and the aggregate report produced:
+
+| Gate or metric | Result |
+|---|---:|
+| Grounded B0 | 0/12 |
+| Grounded episodic memory | 12/12 |
+| Safety | 9/9, zero violations |
+| Exact retrieval | 21/21 |
+| Reproducibility | PASS, all seven cases agree |
+| Quality delta | +100 percentage points |
+| Grounded tokens | 1,512 vs 1,779 — 15.0% reduction |
+| Grounded generation | 22.88s vs 303.43s — 92.5% reduction |
+| Quality, safety, retrieval, reproducibility, cost | PASS |
+
+Report `1b1e887d-35ef-4172-8887-44deb5b9db46` regraded entirely offline and the model was unloaded
+afterward. This promotes B2 for the narrow frozen benchmark claim: later sessions recover relevant
+verified evidence across this hand-authored suite. It does not establish broad memory generalization
+or AGI. The next roadmap milestone is B3 explicit belief state.
 
 ## Milestones
 

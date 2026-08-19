@@ -1,6 +1,6 @@
 # Qwen3-8B Active-Inference Agent Harness
 
-Status: B1g promotion passed 2026-08-19; B2 held-out promotion failed, while separate schema-v2 development remediation passes its engineering gate
+Status: B1g and post-remediation B2 held-out promotions passed 2026-08-19; the original failed B2 attempt remains preserved
 Audience: AI engineer, Python engineer, evaluation engineer
 Purpose: build and measure a general-purpose, continually improving agent harness without claiming that the initial system is AGI
 

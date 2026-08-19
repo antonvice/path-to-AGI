@@ -131,8 +131,8 @@ class GenerationConfig(BaseModel):
 
 class ModelIdentity(BaseModel):
     repo_id: str
-    revision: str = Field(min_length=40, max_length=40)
-    local_path: Path
+    revision: str = Field(pattern=r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
+    local_path: Path | None = None
     backend: str
 
 
@@ -342,6 +342,7 @@ class B1Fixture(BaseModel):
     safety_max_bytes: int | None = Field(default=None, gt=0)
     adversarial: bool = False
     forbidden_substrings: list[str] = Field(default_factory=list)
+    expected_action_source: Literal["model", "explicit_path"] | None = None
 
     @model_validator(mode="after")
     def fields_match_fixture_kind(self) -> "B1Fixture":
@@ -392,6 +393,7 @@ class B1CaseResult(BaseModel):
     evidence_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     safety_violation: bool
     instruction_following_violation: bool = False
+    action_source_passed: bool | None = None
     baseline_input_tokens: int = Field(ge=0)
     baseline_output_tokens: int = Field(ge=0)
     baseline_load_seconds: float = Field(ge=0.0)
@@ -431,7 +433,7 @@ class B1EvaluationReport(BaseModel):
     schema_version: Literal["1"] = "1"
     report_type: Literal["b1_evaluation"] = "b1_evaluation"
     report_id: UUID
-    milestone: Literal["B1c", "B1d"] = "B1c"
+    milestone: Literal["B1c", "B1d", "B1g"] = "B1c"
     started_at: AwareDatetime
     finished_at: AwareDatetime
     fixture_file: str
@@ -765,6 +767,205 @@ class B1RepeatedEvaluationReport(BaseModel):
         )
         if actual_gates != expected_gates or self.gate_passed != all(expected_gates):
             raise ValueError("B1 repeated gate flags do not match outcomes")
+        return self
+
+
+class B1gProcessArtifact(BaseModel):
+    process_index: int = Field(gt=0)
+    process_id: int = Field(gt=0)
+    model_unloaded_before: Literal[True] = True
+    suite_report_file: str = Field(min_length=1)
+    suite_report_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    baseline_traces_file: str = Field(min_length=1)
+    baseline_traces_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    agent_traces_file: str = Field(min_length=1)
+    agent_traces_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    tool_traces_file: str = Field(min_length=1)
+    tool_traces_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    suite: B1EvaluationReport
+
+    @model_validator(mode="after")
+    def contains_cold_b1g_suite(self) -> "B1gProcessArtifact":
+        if self.suite.milestone != "B1g":
+            raise ValueError("independent process must contain a B1g suite")
+        if self.suite.model_load_seconds <= 0.0:
+            raise ValueError("independent process must contain a cold model load")
+        return self
+
+
+class B1gIndependentEvaluationReport(BaseModel):
+    schema_version: Literal["1"] = "1"
+    report_type: Literal["b1g_independent"] = "b1g_independent"
+    report_id: UUID
+    milestone: Literal["B1g"] = "B1g"
+    started_at: AwareDatetime
+    finished_at: AwareDatetime
+    fixture_file: str
+    fixture_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    freeze_manifest_file: str
+    freeze_manifest_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    evaluation_config_file: str
+    evaluation_config_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    agent_config_file: str
+    agent_config_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    policy_file: str
+    policy_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    model: ModelIdentity
+    generation: GenerationConfig
+    process_count: int = Field(ge=3)
+    processes: list[B1gProcessArtifact] = Field(min_length=3)
+    comparisons: list[B1CaseReproducibility] = Field(min_length=1)
+    grounded_runs: int = Field(gt=0)
+    safety_runs: int = Field(gt=0)
+    baseline_passed_runs: int = Field(ge=0)
+    agent_passed_runs: int = Field(ge=0)
+    safety_passed_runs: int = Field(ge=0)
+    safety_violations: int = Field(ge=0)
+    instruction_following_violations: int = Field(ge=0)
+    grounded_baseline_input_tokens: int = Field(ge=0)
+    grounded_baseline_output_tokens: int = Field(ge=0)
+    grounded_agent_input_tokens: int = Field(ge=0)
+    grounded_agent_output_tokens: int = Field(ge=0)
+    model_load_seconds: float = Field(gt=0.0)
+    grounded_baseline_generation_seconds: float = Field(gt=0.0)
+    grounded_agent_generation_seconds: float = Field(ge=0.0)
+    quality_delta: float
+    grounded_token_cost_increase: float = Field(ge=-1.0)
+    grounded_generation_cost_increase: float = Field(ge=-1.0)
+    minimum_success_delta: UnitInterval
+    maximum_cost_increase: UnitInterval
+    quality_gate_passed: bool
+    safety_gate_passed: bool
+    reproducibility_gate_passed: bool
+    cost_gate_passed: bool
+    promotion_gate_passed: bool
+
+    @model_validator(mode="after")
+    def independent_b1g_aggregates_match_processes(self) -> "B1gIndependentEvaluationReport":
+        if self.finished_at < self.started_at:
+            raise ValueError("finished_at cannot precede started_at")
+        if self.process_count != len(self.processes):
+            raise ValueError("B1g process count does not match process artifacts")
+        if [process.process_index for process in self.processes] != list(
+            range(1, self.process_count + 1)
+        ):
+            raise ValueError("B1g process indexes must be contiguous")
+        if len({process.process_id for process in self.processes}) != self.process_count:
+            raise ValueError("B1g requires distinct operating-system process IDs")
+        suites = [process.suite for process in self.processes]
+        if any(
+            suite.model != self.model
+            or suite.generation != self.generation
+            or suite.fixture_sha256 != self.fixture_sha256
+            for suite in suites
+        ):
+            raise ValueError("B1g independent suite inputs differ")
+        grounded = [case for suite in suites for case in suite.cases if case.kind == "grounded"]
+        expected = (
+            len(grounded),
+            sum(suite.safety_cases for suite in suites),
+            sum(suite.baseline_passed_cases for suite in suites),
+            sum(suite.agent_passed_cases for suite in suites),
+            sum(suite.safety_passed_cases for suite in suites),
+            sum(suite.safety_violations for suite in suites),
+            sum(
+                case.instruction_following_violation
+                for suite in suites
+                for case in suite.cases
+            ),
+            sum(case.baseline_input_tokens for case in grounded),
+            sum(case.baseline_output_tokens for case in grounded),
+            sum(case.agent_input_tokens for case in grounded),
+            sum(case.agent_output_tokens for case in grounded),
+        )
+        actual = (
+            self.grounded_runs,
+            self.safety_runs,
+            self.baseline_passed_runs,
+            self.agent_passed_runs,
+            self.safety_passed_runs,
+            self.safety_violations,
+            self.instruction_following_violations,
+            self.grounded_baseline_input_tokens,
+            self.grounded_baseline_output_tokens,
+            self.grounded_agent_input_tokens,
+            self.grounded_agent_output_tokens,
+        )
+        if actual != expected:
+            raise ValueError("B1g independent aggregates do not match suites")
+        if len(self.comparisons) != len(suites[0].cases) or any(
+            len(comparison.agent_run_ids) != self.process_count
+            for comparison in self.comparisons
+        ):
+            raise ValueError("B1g comparisons do not match independent processes")
+        if [comparison.fixture_id for comparison in self.comparisons] != [
+            case.fixture_id for case in suites[0].cases
+        ]:
+            raise ValueError("B1g comparisons do not match suite cases")
+        expected_load = sum(suite.model_load_seconds for suite in suites)
+        expected_timings = (
+            sum(case.baseline_generation_seconds for case in grounded),
+            sum(case.agent_generation_seconds for case in grounded),
+        )
+        if abs(self.model_load_seconds - expected_load) > 1e-12 or any(
+            abs(recorded - calculated) > 1e-12
+            for recorded, calculated in zip(
+                (
+                    self.grounded_baseline_generation_seconds,
+                    self.grounded_agent_generation_seconds,
+                ),
+                expected_timings,
+                strict=True,
+            )
+        ):
+            raise ValueError("B1g independent timings do not match suites")
+        baseline_tokens = (
+            self.grounded_baseline_input_tokens + self.grounded_baseline_output_tokens
+        )
+        agent_tokens = self.grounded_agent_input_tokens + self.grounded_agent_output_tokens
+        if baseline_tokens == 0:
+            raise ValueError("B1g grounded cost comparison requires nonzero B0 tokens")
+        expected_deltas = (
+            self.agent_passed_runs / self.grounded_runs
+            - self.baseline_passed_runs / self.grounded_runs,
+            agent_tokens / baseline_tokens - 1.0,
+            self.grounded_agent_generation_seconds
+            / self.grounded_baseline_generation_seconds
+            - 1.0,
+        )
+        if any(
+            abs(recorded - calculated) > 1e-12
+            for recorded, calculated in zip(
+                (
+                    self.quality_delta,
+                    self.grounded_token_cost_increase,
+                    self.grounded_generation_cost_increase,
+                ),
+                expected_deltas,
+                strict=True,
+            )
+        ):
+            raise ValueError("B1g quality or cost deltas do not match suites")
+        expected_gates = (
+            self.quality_delta >= self.minimum_success_delta,
+            self.safety_passed_runs == self.safety_runs
+            and self.safety_violations == 0
+            and self.instruction_following_violations == 0,
+            all(comparison.all_agreement for comparison in self.comparisons),
+            max(
+                self.grounded_token_cost_increase,
+                self.grounded_generation_cost_increase,
+            )
+            <= self.maximum_cost_increase,
+        )
+        actual_gates = (
+            self.quality_gate_passed,
+            self.safety_gate_passed,
+            self.reproducibility_gate_passed,
+            self.cost_gate_passed,
+        )
+        if actual_gates != expected_gates or self.promotion_gate_passed != all(expected_gates):
+            raise ValueError("B1g promotion gate flags do not match outcomes")
         return self
 
 

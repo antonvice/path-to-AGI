@@ -3,7 +3,7 @@ from pathlib import PurePosixPath
 
 _WORD = re.compile(r"[a-z0-9]+")
 _READ_INTENT = re.compile(
-    r"\b(?:contents?|read|recorded|specif(?:y|ies)|summari[sz]e)\b",
+    r"\b(?:contents?|read|recorded|specif(?:y|ies|ied)|summari[sz]e)\b",
     re.IGNORECASE,
 )
 _NEGATED_READ = re.compile(r"\b(?:do not|don['’]t|never)\s+read\b", re.IGNORECASE)
@@ -33,7 +33,11 @@ def extract_explicit_file_path(text: str) -> str | None:
         return None
     candidates: list[str] = []
     for raw in text.split():
-        candidate = raw.strip("\"'`()[]{}<>").rstrip(",;:!?.")
+        candidate = (
+            raw.strip("\"'`()[]{}<>")
+            .rstrip(",;:!?.")
+            .rstrip("\"'`()[]{}<>")
+        )
         path = PurePosixPath(candidate)
         if (
             not candidate

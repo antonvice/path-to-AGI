@@ -35,13 +35,30 @@ def build_b1_comparisons(
     baseline_traces: TraceStore,
     agent_traces: AgentTraceStore,
 ) -> list[B1CaseReproducibility]:
+    return build_b1_comparisons_from_stores(
+        suites,
+        [baseline_traces] * len(suites),
+        [agent_traces] * len(suites),
+    )
+
+
+def build_b1_comparisons_from_stores(
+    suites: list[B1EvaluationReport],
+    baseline_traces: list[TraceStore],
+    agent_traces: list[AgentTraceStore],
+) -> list[B1CaseReproducibility]:
+    if not suites or len(suites) != len(baseline_traces) or len(suites) != len(agent_traces):
+        raise ValueError("B1 suites and trace stores must have equal nonzero lengths")
     fixture_ids = [case.fixture_id for case in suites[0].cases]
     if any([case.fixture_id for case in suite.cases] != fixture_ids for suite in suites[1:]):
         raise ValueError("B1 suite case order differs across repetitions")
     comparisons: list[B1CaseReproducibility] = []
     for index, fixture_id in enumerate(fixture_ids):
         cases = [suite.cases[index] for suite in suites]
-        agents = [agent_traces.get(str(case.agent_run_id)) for case in cases]
+        agents = [
+            store.get(str(case.agent_run_id))
+            for store, case in zip(agent_traces, cases, strict=True)
+        ]
         actions: list[Literal["read_file", "answer", "stop", "none"]] = []
         for trace in agents:
             actions.append(
@@ -57,8 +74,8 @@ def build_b1_comparisons(
         attempts = [case.proposal_attempts for case in cases]
         passed = [case.agent_passed for case in cases]
         baseline_run_ids = [
-            baseline_traces.get(str(case.baseline_run_id)).run_id
-            for case in cases
+            store.get(str(case.baseline_run_id)).run_id
+            for store, case in zip(baseline_traces, cases, strict=True)
             if case.baseline_run_id is not None
         ]
         agreement = (

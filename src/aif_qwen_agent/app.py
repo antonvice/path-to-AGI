@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any
 from uuid import uuid4
 
 import typer
@@ -17,6 +18,11 @@ from aif_qwen_agent.b1_evaluation import (
     evaluate_b1,
     verify_b1_report,
 )
+from aif_qwen_agent.b1_independent import (
+    load_b1g_independent_report,
+    run_b1g_processes,
+    verify_b1g_independent_report,
+)
 from aif_qwen_agent.b1_reproducibility import (
     evaluate_repeated_b1,
     load_any_b1_report,
@@ -31,7 +37,7 @@ from aif_qwen_agent.evaluation import (
     verify_report,
     verify_reproducibility_report,
 )
-from aif_qwen_agent.model_adapters import TransformersAdapter
+from aif_qwen_agent.model_adapters import OllamaAdapter, TransformersAdapter
 from aif_qwen_agent.schemas import (
     B1RepeatedEvaluationReport,
     BaselineReproducibilityReport,
@@ -49,6 +55,8 @@ tool_app = typer.Typer(no_args_is_help=True)
 app.add_typer(tool_app, name="tool")
 console = Console()
 
+ModelAdapter = TransformersAdapter | OllamaAdapter
+
 
 def _terminal_safe_text(value: str) -> str:
     return "".join(
@@ -59,21 +67,47 @@ def _terminal_safe_text(value: str) -> str:
     )
 
 
-def _build_baseline_runner(config: Path, traces: Path) -> BaselineRunner:
-    settings = load_yaml(config)
-    model = ModelIdentity(
-        repo_id=settings["model"]["repo_id"],
-        revision=settings["model"]["revision"],
-        local_path=Path(settings["model"]["local_path"]),
+def _model_identity(settings: dict[str, Any]) -> ModelIdentity:
+    model_settings = settings["model"]
+    local_path = model_settings.get("local_path")
+    return ModelIdentity(
+        repo_id=model_settings["repo_id"],
+        revision=model_settings["revision"],
+        local_path=Path(local_path) if local_path is not None else None,
         backend=settings["inference"]["backend"],
     )
-    generation = GenerationConfig.model_validate(settings["inference"])
-    adapter = TransformersAdapter(
+
+
+def _model_adapter(
+    settings: dict[str, Any],
+    model: ModelIdentity,
+    generation: GenerationConfig,
+) -> ModelAdapter:
+    if model.backend == "ollama":
+        ollama = settings.get("ollama", {})
+        return OllamaAdapter(
+            model=model.repo_id,
+            digest=model.revision,
+            endpoint=settings["inference"].get("endpoint", "http://127.0.0.1:11434"),
+            context_tokens=settings["inference"].get("max_context_tokens", 32_768),
+            enable_thinking=generation.enable_thinking,
+            keep_alive=ollama.get("keep_alive", "5m"),
+        )
+    if model.local_path is None:
+        raise ValueError("Transformers models require model.local_path")
+    return TransformersAdapter(
         model_path=model.local_path,
         backend=model.backend,
-        dtype=settings["model"]["dtype"],
+        dtype=settings["model"].get("dtype", "auto"),
         enable_thinking=generation.enable_thinking,
     )
+
+
+def _build_baseline_runner(config: Path, traces: Path) -> BaselineRunner:
+    settings = load_yaml(config)
+    model = _model_identity(settings)
+    generation = GenerationConfig.model_validate(settings["inference"])
+    adapter = _model_adapter(settings, model, generation)
     return BaselineRunner(adapter, model, generation, TraceStore(traces))
 
 
@@ -85,12 +119,7 @@ def _build_agent_runner(
 ) -> OneStepAgent:
     settings = load_yaml(config)
     policy_settings = load_yaml(policy_config)
-    model = ModelIdentity(
-        repo_id=settings["model"]["repo_id"],
-        revision=settings["model"]["revision"],
-        local_path=Path(settings["model"]["local_path"]),
-        backend=settings["inference"]["backend"],
-    )
+    model = _model_identity(settings)
     generation = GenerationConfig.model_validate(settings["inference"])
     agent_settings = settings.get("agent", {})
     proposal_generation = generation.model_copy(
@@ -100,12 +129,7 @@ def _build_agent_runner(
             )
         }
     )
-    adapter = TransformersAdapter(
-        model_path=model.local_path,
-        backend=model.backend,
-        dtype=settings["model"]["dtype"],
-        enable_thinking=generation.enable_thinking,
-    )
+    adapter = _model_adapter(settings, model, generation)
     read_file = ReadFileTool(
         ReadFilePolicy.model_validate(policy_settings["filesystem"]),
         ReadFileTraceStore(tool_traces),
@@ -131,12 +155,7 @@ def _build_b1_runners(
 ) -> tuple[BaselineRunner, OneStepAgent]:
     settings = load_yaml(config)
     policy_settings = load_yaml(policy_config)
-    model = ModelIdentity(
-        repo_id=settings["model"]["repo_id"],
-        revision=settings["model"]["revision"],
-        local_path=Path(settings["model"]["local_path"]),
-        backend=settings["inference"]["backend"],
-    )
+    model = _model_identity(settings)
     generation = GenerationConfig.model_validate(settings["inference"])
     agent_settings = settings.get("agent", {})
     proposal_generation = generation.model_copy(
@@ -146,12 +165,7 @@ def _build_b1_runners(
             )
         }
     )
-    adapter = TransformersAdapter(
-        model_path=model.local_path,
-        backend=model.backend,
-        dtype=settings["model"]["dtype"],
-        enable_thinking=generation.enable_thinking,
-    )
+    adapter = _model_adapter(settings, model, generation)
     baseline = BaselineRunner(adapter, model, generation, TraceStore(baseline_traces))
     agent = OneStepAgent(
         adapter,
@@ -173,7 +187,26 @@ def _build_b1_runners(
 def doctor(config: Path = Path("configs/qwen3_8b.yaml")) -> None:
     """Check configuration and local model availability."""
     settings = load_yaml(config)
-    model_path = Path(settings["model"]["local_path"])
+    model = _model_identity(settings)
+    if model.backend == "ollama":
+        adapter = _model_adapter(
+            settings,
+            model,
+            GenerationConfig.model_validate(settings["inference"]),
+        )
+        if not isinstance(adapter, OllamaAdapter):
+            raise TypeError("Ollama config produced the wrong adapter")
+        adapter.verify_model()
+        table = Table("Check", "Value")
+        table.add_row("model", model.repo_id)
+        table.add_row("revision", model.revision)
+        table.add_row("backend", model.backend)
+        table.add_row("model digest", "verified")
+        console.print(table)
+        return
+    if model.local_path is None:
+        raise ValueError("Transformers models require model.local_path")
+    model_path = model.local_path
     expected_weights = [
         model_path / f"model-{index:05d}-of-00005.safetensors" for index in range(1, 6)
     ]
@@ -401,7 +434,7 @@ def eval_b1(
             "-" if case.baseline_passed is None else ("PASS" if case.baseline_passed else "FAIL"),
             "PASS" if case.agent_passed else "FAIL",
             case.agent_status,
-            str(case.proposal_attempts - 1),
+            str(max(case.proposal_attempts - 1, 0)),
         )
     console.print(table)
     console.print(
@@ -454,6 +487,65 @@ def regrade_b1(
         f"verified report={result.report_id} gate={'PASS' if result.gate_passed else 'FAIL'} "
         f"grounded={result.agent_passed_cases}/{result.grounded_cases} "
         f"safety={result.safety_passed_cases}/{result.safety_cases}"
+    )
+
+
+@app.command("eval-b1g")
+def eval_b1g(
+    fixtures: Path = Path("evals/tasks/b1g/suite.yaml"),
+    freeze_manifest: Path = Path("evals/tasks/b1g/freeze.json"),
+    config: Path = Path("configs/qwen3_8_27b_b1g.yaml"),
+    policy: Path = Path("configs/policy.yaml"),
+    evaluation_config: Path = Path("configs/evaluation.yaml"),
+    output_dir: Path = Path("artifacts/b1g"),
+    processes: int = 3,
+) -> None:
+    """Run B1g in cold, independent processes and build its promotion gate."""
+    result = run_b1g_processes(
+        fixtures,
+        freeze_manifest,
+        evaluation_config,
+        config,
+        policy,
+        output_dir,
+        processes,
+        status=lambda message: console.print(f"[dim]{message}[/dim]"),
+    )
+    table = Table("Process", "PID", "Cold load", "Suite gate")
+    for process in result.processes:
+        table.add_row(
+            str(process.process_index),
+            str(process.process_id),
+            f"{process.suite.model_load_seconds:.2f}s",
+            "PASS" if process.suite.gate_passed else "FAIL",
+        )
+    console.print(table)
+    console.print(
+        f"[dim]promotion={'PASS' if result.promotion_gate_passed else 'FAIL'} "
+        f"quality={'PASS' if result.quality_gate_passed else 'FAIL'} "
+        f"safety={'PASS' if result.safety_gate_passed else 'FAIL'} "
+        f"repro={'PASS' if result.reproducibility_gate_passed else 'FAIL'} "
+        f"cost={'PASS' if result.cost_gate_passed else 'FAIL'} "
+        f"quality_delta={result.quality_delta:.1%} "
+        f"grounded_token_cost={result.grounded_token_cost_increase:.1%} "
+        f"grounded_generation_cost={result.grounded_generation_cost_increase:.1%} "
+        f"report={output_dir / 'report.json'}[/dim]"
+    )
+
+
+@app.command("regrade-b1g")
+def regrade_b1g(report: Path = Path("artifacts/b1g/report.json")) -> None:
+    """Verify B1g entirely from its frozen manifest, reports, and traces."""
+    result = load_b1g_independent_report(report)
+    verify_b1g_independent_report(result)
+    console.print(
+        f"verified report={result.report_id} "
+        f"promotion={'PASS' if result.promotion_gate_passed else 'FAIL'} "
+        f"processes={result.process_count} "
+        f"quality={'PASS' if result.quality_gate_passed else 'FAIL'} "
+        f"safety={'PASS' if result.safety_gate_passed else 'FAIL'} "
+        f"repro={'PASS' if result.reproducibility_gate_passed else 'FAIL'} "
+        f"cost={'PASS' if result.cost_gate_passed else 'FAIL'}"
     )
 
 

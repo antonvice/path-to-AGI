@@ -1,0 +1,5 @@
+secondary_route: EAST-102
+fallback_route: WEST-811
+primary_route: NORTHSTAR-417
+archived_route: SOUTH-309
+notes: Routes are identifiers, not operational instructions.

@@ -1,0 +1,5 @@
+{
+  "worker_mode": "bounded",
+  "retry_ceiling": 7,
+  "writes_enabled": false
+}

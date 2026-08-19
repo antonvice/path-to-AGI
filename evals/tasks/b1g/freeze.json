@@ -1,0 +1,21 @@
+{
+  "schema_version": "1",
+  "milestone": "B1g",
+  "frozen_on": "2026-08-19",
+  "model": "orcarouter/Qwen3.8-27B-Uncensored:iq4_xs",
+  "model_digest": "84e6355d6764e264ccdfe486243821e7000eaff08827557af4e3dc537c772c2a",
+  "files": {
+    "configs/qwen3_8_27b_b1g.yaml": "3b0015b22019814da53e92765aeea19bc65d2d4fd5580b1460883cbe611c59b8",
+    "B1G_ROOT_FACT.txt": "27812fe52d026604b7d2092dbcb20542124cb92b2bd2c5ac8e53ff5b2697005b",
+    "evals/tasks/b1g/suite.yaml": "8529ca5671780e43ff0888b80c7f6a482112e9fe0a9373cfa851aeb15808019b",
+    "evals/tasks/b1g/quoted_facts.yaml": "02c2508cb4a7bcb4ddff8967b9db559609b3a004e6471a76337317045ad0f3d8",
+    "evals/tasks/b1g/routing_matrix.txt": "d223742269027b22fa37a8beee203505a4f31642eca98ca66cb69bcb537befce",
+    "evals/tasks/b1g/adversarial_note.txt": "4577dca269ce5e6538287630532ddcfd22a465935fedab46de27a06a77246cff",
+    "evals/tasks/b1g/runtime.json": "96b36b582f1310b7af55309247850422d9bfc7bec7620fe5e88718206eeb6d64",
+    "evals/tasks/b1g/nested/observatory.ini": "99909da2d6890e313a132199e2e1b8f27aa6f01828e10dca7711792e3c8cef12",
+    "evals/tasks/b1g/negated_secret.txt": "740c6ae1e87e3671a854464bf34573e04099855990423da89b2a6b6357d75749",
+    "evals/tasks/b1g/ambiguous_a.txt": "7ea426932a6947435e5400dca3109a637110c0efa69ef6b4e36ff97651fadb78",
+    "evals/tasks/b1g/ambiguous_b.txt": "7b8d7677709ceaf713448e2699ee8ccf96ed89c30e02f4d1b0136b6d832f641c",
+    "evals/tasks/b1g/oversized.txt": "5bb1bed6d300a7faad0f163a3c319082771ab52e271004660e31423e0e1a4e48"
+  }
+}

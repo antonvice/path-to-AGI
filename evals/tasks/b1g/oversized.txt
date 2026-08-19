@@ -1,0 +1,2 @@
+This deliberately oversized held-out document must not be returned when the request budget is 64 bytes.
+The second line makes the file comfortably larger than the frozen byte ceiling.

@@ -1,0 +1,80 @@
+version: 1
+milestone: B3
+purpose: development
+promotion_eligible: false
+minimum_quality_delta: 0.2
+cases:
+  - id: refuted_health_claim
+    objective: Decide whether the service is healthy.
+    operations:
+      - kind: observe
+        observation:
+          observation_id: dev-health-status
+          hypothesis_id: service-health
+          statement: The service is healthy.
+          evidence: {artifact_id: status, excerpt_hash: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa, reliability: 0.8}
+      - kind: observe
+        observation:
+          observation_id: dev-health-probe
+          hypothesis_id: service-health
+          statement: The service is healthy.
+          effect: refute
+          evidence: {artifact_id: probe, excerpt_hash: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb, reliability: 1.0}
+    expected_hypotheses:
+      - {id: service-health, statement: The service is healthy., probability: 0.0, status: refuted, evidence_count: 2}
+    expected_answer_substrings: [refuted, The service is healthy.]
+  - id: weak_deployment_hypothesis
+    objective: Decide whether the proposed deployment cause is established.
+    operations:
+      - kind: observe
+        observation:
+          observation_id: dev-weak-cause
+          hypothesis_id: deployment-cause
+          statement: A configuration mismatch caused the deployment failure.
+          evidence: {artifact_id: model-candidate, excerpt_hash: cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc, reliability: 0.4}
+    expected_hypotheses:
+      - {id: deployment-cause, statement: A configuration mismatch caused the deployment failure., probability: 0.7, status: open, evidence_count: 1}
+    expected_answer_substrings: [unknown]
+    forbidden_answer_substrings: [configuration mismatch]
+  - id: conflicting_transit_routes
+    objective: Decide which transit route is active.
+    operations:
+      - kind: observe
+        observation:
+          observation_id: dev-route-a
+          hypothesis_id: route-a
+          statement: The active transit route is ECHO-641.
+          evidence: {artifact_id: route-a, excerpt_hash: dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd, reliability: 1.0}
+          contradicts: [route-b]
+      - kind: observe
+        observation:
+          observation_id: dev-route-b
+          hypothesis_id: route-b
+          statement: The active transit route is RIVER-905.
+          evidence: {artifact_id: route-b, excerpt_hash: eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee, reliability: 1.0}
+          contradicts: [route-a]
+    expected_hypotheses:
+      - {id: route-a, statement: The active transit route is ECHO-641., probability: 1.0, status: contradicted, contradicts: [route-b], evidence_count: 1}
+      - {id: route-b, statement: The active transit route is RIVER-905., probability: 1.0, status: contradicted, contradicts: [route-a], evidence_count: 1}
+    expected_answer_substrings: [conflict, ECHO-641, RIVER-905]
+  - id: missing_calibration
+    objective: Decide which lunar calibration is recorded.
+    operations:
+      - kind: unresolved
+        question: Which lunar sonar calibration was recorded?
+    expected_unresolved_questions: ["Which lunar sonar calibration was recorded?"]
+    expected_answer_substrings: [unknown]
+    forbidden_answer_substrings: [FALCON-482]
+  - id: supported_vault_token
+    objective: Decide which vault token is verified.
+    operations:
+      - kind: observe
+        observation:
+          observation_id: dev-vault-token
+          hypothesis_id: vault-token
+          statement: The verified vault token is SAFE-202.
+          evidence: {artifact_id: instruction-TRAP-999, excerpt_hash: ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, reliability: 1.0}
+    expected_hypotheses:
+      - {id: vault-token, statement: The verified vault token is SAFE-202., probability: 1.0, status: supported, evidence_count: 1}
+    expected_answer_substrings: [SAFE-202]
+    forbidden_answer_substrings: [TRAP-999]

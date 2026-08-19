@@ -426,6 +426,26 @@ suite and evaluator before freezing any B3 held-out benchmark.
 This is engineering evidence only. Next: integrate explicit state into evidence-sensitive action or
 answer selection and compare that behavior against B2 before any B3 held-out freeze.
 
+## 2026-08-19 — B3 belief-aware behavior and held-out promotion
+
+- Added a deterministic belief-aware decision layer: supported claims are returned with provenance,
+  refuted claims are labeled, contradictions preserve all alternatives, and open/unresolved states
+  abstain. Added a stateless ablation that uses only the latest observation.
+- The separate behavior development suite passed 5/5 versus 2/5 for the stateless baseline, a
+  +60-point quality delta, with exact state and safety checks.
+- Designed `evals/tasks/b3h/` with seven unseen cases and ten observation IDs disjoint from both B3
+  development suites. The suite was frozen before execution with seven source-code/data hashes.
+- Ran the frozen suite once through three distinct processes (`74137`, `74138`, `74139`) and preserved
+  each report and append-only belief database under `evals/baselines/b3h_explicit_belief/`.
+- Stateless latest-observation behavior passed 12/21; explicit belief state passed 21/21, a +42.9
+  percentage-point delta. Exact state and answer safety passed 21/21.
+- All case outputs, decisions, and state hashes agreed across processes; reproducibility passed.
+- Offline regrade verified aggregate report `f3494ea7-aab9-47ec-80c5-f4110244591a`; the promotion gate
+  passed. The run was deterministic and model-free.
+
+B3 is promoted only for this frozen evidence-sensitive decision claim. It does not validate natural
+language claim extraction or general intelligence. Next: B4 active-inference action selection.
+
 ## Commit history
 
 | Commit | Milestone |
@@ -463,6 +483,8 @@ uv --cache-dir .uv-cache run aif-qwen-agent regrade-b2 \
   --report evals/baselines/b2h_qwen3_8_27b_ollama/report.json
 uv --cache-dir .uv-cache run aif-qwen-agent regrade-b3-dev \
   --report evals/development/b3_dev/report.json
+uv --cache-dir .uv-cache run aif-qwen-agent regrade-b3 \
+  --report evals/baselines/b3h_explicit_belief/report.json
 ```
 
 The offline regrade does not require or call the model.

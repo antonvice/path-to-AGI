@@ -40,6 +40,14 @@ from aif_qwen_agent.b2_independent import (
     run_b2_processes,
     verify_b2_independent_report,
 )
+from aif_qwen_agent.b3_behavior import (
+    evaluate_b3_behavior,
+    load_b3_behavior_report,
+    load_b3_independent_report,
+    run_b3_independent,
+    verify_b3_behavior_report,
+    verify_b3_independent_report,
+)
 from aif_qwen_agent.b3_evaluation import evaluate_b3, load_b3_report, verify_b3_report
 from aif_qwen_agent.baseline import BaselineRunner
 from aif_qwen_agent.config import load_yaml
@@ -751,6 +759,70 @@ def regrade_b3_dev(report: Path = Path("artifacts/b3-dev/report.json")) -> None:
         f"verified report={result.report_id} development_gate="
         f"{'PASS' if result.engineering_gate_passed else 'FAIL'} "
         f"cases={result.passed_cases}/{len(result.cases)} promotion_eligible=false"
+    )
+
+
+@app.command("eval-b3-behavior")
+def eval_b3_behavior_command(
+    fixtures: Path = Path("evals/tasks/b3_behavior_dev/suite.yaml"),
+    database: Path = Path("artifacts/b3-behavior/beliefs.db"),
+    report: Path = Path("artifacts/b3-behavior/report.json"),
+    freeze_manifest: Path | None = None,
+) -> None:
+    """Run one B3 belief-aware behavior ablation."""
+    result = evaluate_b3_behavior(fixtures, database, report, freeze_manifest)
+    console.print(
+        f"gate={'PASS' if result.engineering_gate_passed else 'FAIL'} "
+        f"baseline={result.baseline_passed_cases}/{len(result.cases)} "
+        f"belief={result.belief_passed_cases}/{len(result.cases)} "
+        f"quality_delta={result.quality_delta:.1%} report={report}"
+    )
+
+
+@app.command("regrade-b3-behavior")
+def regrade_b3_behavior_command(
+    report: Path = Path("artifacts/b3-behavior/report.json"),
+) -> None:
+    """Regrade one B3 behavior report without model calls."""
+    result = load_b3_behavior_report(report)
+    verify_b3_behavior_report(result)
+    console.print(
+        f"verified report={result.report_id} gate="
+        f"{'PASS' if result.engineering_gate_passed else 'FAIL'} "
+        f"quality_delta={result.quality_delta:.1%}"
+    )
+
+
+@app.command("eval-b3")
+def eval_b3_independent_command(
+    fixtures: Path = Path("evals/tasks/b3h/suite.yaml"),
+    freeze_manifest: Path = Path("evals/tasks/b3h/freeze.json"),
+    output_dir: Path = Path("artifacts/b3-independent"),
+    processes: int = 3,
+) -> None:
+    """Run the frozen B3 held-out suite in independent processes."""
+    result = run_b3_independent(fixtures, freeze_manifest, output_dir, processes)
+    console.print(
+        f"promotion={'PASS' if result.promotion_gate_passed else 'FAIL'} "
+        f"quality={'PASS' if result.quality_gate_passed else 'FAIL'} "
+        f"state={'PASS' if result.state_gate_passed else 'FAIL'} "
+        f"safety={'PASS' if result.safety_gate_passed else 'FAIL'} "
+        f"repro={'PASS' if result.reproducibility_gate_passed else 'FAIL'} "
+        f"quality_delta={result.quality_delta:.1%} report={output_dir / 'report.json'}"
+    )
+
+
+@app.command("regrade-b3")
+def regrade_b3_independent_command(
+    report: Path = Path("artifacts/b3-independent/report.json"),
+) -> None:
+    """Verify B3 promotion evidence entirely offline."""
+    result = load_b3_independent_report(report)
+    verify_b3_independent_report(result)
+    console.print(
+        f"verified report={result.report_id} promotion="
+        f"{'PASS' if result.promotion_gate_passed else 'FAIL'} "
+        f"processes={result.process_count} quality_delta={result.quality_delta:.1%}"
     )
 
 

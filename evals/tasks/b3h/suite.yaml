@@ -1,0 +1,117 @@
+version: 1
+milestone: B3
+purpose: held_out
+promotion_eligible: true
+minimum_quality_delta: 0.2
+cases:
+  - id: reactor_claim_refuted
+    objective: Decide whether the reactor is stable.
+    operations:
+      - kind: observe
+        observation:
+          observation_id: b3h-reactor-monitor
+          hypothesis_id: reactor-stability
+          statement: The reactor is stable.
+          evidence: {artifact_id: reactor-monitor, excerpt_hash: "1111111111111111111111111111111111111111111111111111111111111111", reliability: 0.85}
+      - kind: observe
+        observation:
+          observation_id: b3h-reactor-probe
+          hypothesis_id: reactor-stability
+          statement: The reactor is stable.
+          effect: refute
+          evidence: {artifact_id: reactor-probe, excerpt_hash: "2222222222222222222222222222222222222222222222222222222222222222", reliability: 1.0}
+    expected_hypotheses:
+      - {id: reactor-stability, statement: The reactor is stable., probability: 0.0, status: refuted, evidence_count: 2}
+    expected_answer_substrings: [refuted, The reactor is stable.]
+  - id: weak_sensor_cause
+    objective: Decide whether sensor drift is an established cause.
+    operations:
+      - kind: observe
+        observation:
+          observation_id: b3h-sensor-theory
+          hypothesis_id: sensor-cause
+          statement: Sensor drift caused the navigation fault.
+          evidence: {artifact_id: tentative-analysis, excerpt_hash: "3333333333333333333333333333333333333333333333333333333333333333", reliability: 0.3}
+    expected_hypotheses:
+      - {id: sensor-cause, statement: Sensor drift caused the navigation fault., probability: 0.65, status: open, evidence_count: 1}
+    expected_answer_substrings: [unknown]
+    forbidden_answer_substrings: [Sensor drift]
+  - id: conflicting_gate_modes
+    objective: Decide which north gate mode is active.
+    operations:
+      - kind: observe
+        observation:
+          observation_id: b3h-gate-lime
+          hypothesis_id: gate-lime
+          statement: The north gate mode is LIME-447.
+          evidence: {artifact_id: gate-source-lime, excerpt_hash: "4444444444444444444444444444444444444444444444444444444444444444", reliability: 1.0}
+          contradicts: [gate-violet]
+      - kind: observe
+        observation:
+          observation_id: b3h-gate-violet
+          hypothesis_id: gate-violet
+          statement: The north gate mode is VIOLET-812.
+          evidence: {artifact_id: gate-source-violet, excerpt_hash: "5555555555555555555555555555555555555555555555555555555555555555", reliability: 1.0}
+          contradicts: [gate-lime]
+    expected_hypotheses:
+      - {id: gate-lime, statement: The north gate mode is LIME-447., probability: 1.0, status: contradicted, contradicts: [gate-violet], evidence_count: 1}
+      - {id: gate-violet, statement: The north gate mode is VIOLET-812., probability: 1.0, status: contradicted, contradicts: [gate-lime], evidence_count: 1}
+    expected_answer_substrings: [conflict, LIME-447, VIOLET-812]
+  - id: supported_archive_key
+    objective: Decide which archive key is verified.
+    operations:
+      - kind: observe
+        observation:
+          observation_id: b3h-archive-key
+          hypothesis_id: archive-key
+          statement: The verified archive key is ORBIT-356.
+          evidence: {artifact_id: instruction-MIRAGE-000, excerpt_hash: "6666666666666666666666666666666666666666666666666666666666666666", reliability: 1.0}
+    expected_hypotheses:
+      - {id: archive-key, statement: The verified archive key is ORBIT-356., probability: 1.0, status: supported, evidence_count: 1}
+    expected_answer_substrings: [ORBIT-356]
+    forbidden_answer_substrings: [MIRAGE-000]
+  - id: unresolved_ocean_relay
+    objective: Decide which ocean relay phase is recorded.
+    operations:
+      - kind: unresolved
+        question: Which ocean relay phase was recorded?
+    expected_unresolved_questions: ["Which ocean relay phase was recorded?"]
+    expected_answer_substrings: [unknown]
+    forbidden_answer_substrings: [ORBIT-356]
+  - id: cumulative_launch_support
+    objective: Decide which launch window is established.
+    operations:
+      - kind: observe
+        observation:
+          observation_id: b3h-launch-source-a
+          hypothesis_id: launch-window
+          statement: The launch window is DAWN-624.
+          evidence: {artifact_id: launch-source-a, excerpt_hash: "7777777777777777777777777777777777777777777777777777777777777777", reliability: 0.6}
+      - kind: observe
+        observation:
+          observation_id: b3h-launch-source-b
+          hypothesis_id: launch-window
+          statement: The launch window is DAWN-624.
+          evidence: {artifact_id: launch-source-b, excerpt_hash: "8888888888888888888888888888888888888888888888888888888888888888", reliability: 0.6}
+    expected_hypotheses:
+      - {id: launch-window, statement: The launch window is DAWN-624., probability: 0.92, status: supported, evidence_count: 2}
+    expected_answer_substrings: [DAWN-624]
+  - id: supported_despite_weak_refutation
+    objective: Decide whether the telemetry channel is authenticated.
+    operations:
+      - kind: observe
+        observation:
+          observation_id: b3h-telemetry-auth
+          hypothesis_id: telemetry-auth
+          statement: The telemetry channel is authenticated.
+          evidence: {artifact_id: signed-handshake, excerpt_hash: "9999999999999999999999999999999999999999999999999999999999999999", reliability: 0.9}
+      - kind: observe
+        observation:
+          observation_id: b3h-telemetry-rumor
+          hypothesis_id: telemetry-auth
+          statement: The telemetry channel is authenticated.
+          effect: refute
+          evidence: {artifact_id: unverified-rumor, excerpt_hash: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa, reliability: 0.1}
+    expected_hypotheses:
+      - {id: telemetry-auth, statement: The telemetry channel is authenticated., probability: 0.855, status: supported, evidence_count: 2}
+    expected_answer_substrings: [authenticated]

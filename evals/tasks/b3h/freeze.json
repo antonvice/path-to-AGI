@@ -1,0 +1,18 @@
+{
+  "schema_version": "1",
+  "milestone": "B3",
+  "purpose": "held_out",
+  "promotion_eligible": true,
+  "frozen_on": "2026-08-19",
+  "parent_commit": "11b68cb47352aac3d209e8d77594e0aed50181ee",
+  "inference": "deterministic_no_model_v1",
+  "files": {
+    "evals/tasks/b3h/suite.yaml": "d54c60e84822c577ecf785df308b389356ca625ab523764f922e1e8ff3e331d4",
+    "src/aif_qwen_agent/belief.py": "41d24dd20baa5bd45613e9bf45fa402225167a835f32c9ba4a3b50ce7cbd9a57",
+    "src/aif_qwen_agent/belief_decision.py": "b21319a42fdeb757ebd749deaa2b3e2a32783e89b7d4500da11882ea0301bbb0",
+    "src/aif_qwen_agent/b3_behavior.py": "cdf9ca1bddf7a851d75f863a4c5a76418c2cdbd6c1891d4085ea26590cab3981",
+    "src/aif_qwen_agent/b3_evaluation.py": "eb3b90587121f7a8a2d6b78fdf65f9619edac62aaf18f446654652178422bf81",
+    "src/aif_qwen_agent/context.py": "8e8f1b8d06c93436f0d0115dff6f81188b386668a10ca08fe5bfeb66ebea1b38",
+    "src/aif_qwen_agent/app.py": "40fa1f8cdb26a03a36c044f81b3b671eec92ef0e6fe934e7335c0217272dc1b7"
+  }
+}

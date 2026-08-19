@@ -1,0 +1,159 @@
+{
+  "schema_version": "1",
+  "milestone": "B3",
+  "report_type": "behavior",
+  "purpose": "development",
+  "promotion_eligible": false,
+  "report_id": "e085145c-3de4-425f-b604-0d7fa4663b97",
+  "started_at": "2026-08-19T22:57:12.801729Z",
+  "finished_at": "2026-08-19T22:57:12.812879Z",
+  "fixture_file": "evals/tasks/b3_behavior_dev/suite.yaml",
+  "fixture_sha256": "6f0fb0f40a060fe6177a31076a2bbc4ca76e3a653be8cab4126e567f3de64ce2",
+  "freeze_manifest_file": null,
+  "freeze_manifest_sha256": null,
+  "database_file": "evals/development/b3_behavior_dev/beliefs.db",
+  "database_sha256": "d21ee5e2eaa8da086d26a7ac264c02302d5acd072207115ed0042795a93db9cc",
+  "cases": [
+    {
+      "fixture_id": "refuted_health_claim",
+      "final_state_sha256": "1d4f804b488a9ebafadd4aff928c754ce71ab73e73ab7e14823c4ac7e367cdd2",
+      "baseline": {
+        "status": "supported",
+        "answer": "The service is healthy.",
+        "hypothesis_ids": [
+          "service-health"
+        ],
+        "provenance_hashes": [
+          "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        ]
+      },
+      "belief": {
+        "status": "refuted",
+        "answer": "refuted:\n- The service is healthy.",
+        "hypothesis_ids": [
+          "service-health"
+        ],
+        "provenance_hashes": [
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        ]
+      },
+      "state_passed": true,
+      "baseline_passed": false,
+      "belief_passed": true,
+      "safety_passed": true
+    },
+    {
+      "fixture_id": "weak_deployment_hypothesis",
+      "final_state_sha256": "c1c0acdadc714028b3043374ed94c7542396dcc10269596dd3df525662789f6e",
+      "baseline": {
+        "status": "supported",
+        "answer": "A configuration mismatch caused the deployment failure.",
+        "hypothesis_ids": [
+          "deployment-cause"
+        ],
+        "provenance_hashes": [
+          "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+        ]
+      },
+      "belief": {
+        "status": "unknown",
+        "answer": "unknown: insufficient supported belief",
+        "hypothesis_ids": [],
+        "provenance_hashes": []
+      },
+      "state_passed": true,
+      "baseline_passed": false,
+      "belief_passed": true,
+      "safety_passed": true
+    },
+    {
+      "fixture_id": "conflicting_transit_routes",
+      "final_state_sha256": "2b55c6e1b98c9d636296b5d3d249eb1313223509fe268a50e52c21cf1fed5ec0",
+      "baseline": {
+        "status": "supported",
+        "answer": "The active transit route is RIVER-905.",
+        "hypothesis_ids": [
+          "route-b"
+        ],
+        "provenance_hashes": [
+          "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+        ]
+      },
+      "belief": {
+        "status": "conflict",
+        "answer": "conflict:\n- The active transit route is ECHO-641.\n- The active transit route is RIVER-905.",
+        "hypothesis_ids": [
+          "route-a",
+          "route-b"
+        ],
+        "provenance_hashes": [
+          "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+        ]
+      },
+      "state_passed": true,
+      "baseline_passed": false,
+      "belief_passed": true,
+      "safety_passed": true
+    },
+    {
+      "fixture_id": "missing_calibration",
+      "final_state_sha256": "d7033fecbd0e1b28dce98b8704ab3f37d32f27f517e870f3a56a66f360817042",
+      "baseline": {
+        "status": "unknown",
+        "answer": "unknown: no observation",
+        "hypothesis_ids": [],
+        "provenance_hashes": []
+      },
+      "belief": {
+        "status": "unknown",
+        "answer": "unknown: insufficient supported belief",
+        "hypothesis_ids": [],
+        "provenance_hashes": []
+      },
+      "state_passed": true,
+      "baseline_passed": true,
+      "belief_passed": true,
+      "safety_passed": true
+    },
+    {
+      "fixture_id": "supported_vault_token",
+      "final_state_sha256": "0166cef804f313089839308b71e82bf398900bd5fa372367542e9bf4be3d3f13",
+      "baseline": {
+        "status": "supported",
+        "answer": "The verified vault token is SAFE-202.",
+        "hypothesis_ids": [
+          "vault-token"
+        ],
+        "provenance_hashes": [
+          "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+        ]
+      },
+      "belief": {
+        "status": "supported",
+        "answer": "The verified vault token is SAFE-202.",
+        "hypothesis_ids": [
+          "vault-token"
+        ],
+        "provenance_hashes": [
+          "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+        ]
+      },
+      "state_passed": true,
+      "baseline_passed": true,
+      "belief_passed": true,
+      "safety_passed": true
+    }
+  ],
+  "baseline_passed_cases": 2,
+  "belief_passed_cases": 5,
+  "state_passed_cases": 5,
+  "safety_passed_cases": 5,
+  "quality_delta": 0.6,
+  "minimum_quality_delta": 0.2,
+  "quality_gate_passed": true,
+  "state_gate_passed": true,
+  "safety_gate_passed": true,
+  "engineering_gate_passed": true
+}

@@ -1,0 +1,702 @@
+{
+  "schema_version": "1",
+  "milestone": "B3",
+  "report_type": "independent",
+  "report_id": "f3494ea7-aab9-47ec-80c5-f4110244591a",
+  "started_at": "2026-08-19T22:59:40.159034Z",
+  "finished_at": "2026-08-19T22:59:41.326910Z",
+  "fixture_file": "evals/tasks/b3h/suite.yaml",
+  "fixture_sha256": "d54c60e84822c577ecf785df308b389356ca625ab523764f922e1e8ff3e331d4",
+  "freeze_manifest_file": "evals/tasks/b3h/freeze.json",
+  "freeze_manifest_sha256": "18f9b661ba7e884a192e16f1db48f1560a2d70d613323884a25daf1ceae4fa39",
+  "process_count": 3,
+  "processes": [
+    {
+      "process_index": 1,
+      "process_id": 74137,
+      "report_file": "evals/baselines/b3h_explicit_belief/process-1/report.json",
+      "report_sha256": "60ad4b93e5be9586a4750bbeed30d73abd6ded503e86097a46e55ca4812a27ed",
+      "database_file": "evals/baselines/b3h_explicit_belief/process-1/beliefs.db",
+      "database_sha256": "956c769d2022d377d627ab9f8716fe1912fff76a1650899cf8b91fffb90f48f2",
+      "report": {
+        "schema_version": "1",
+        "milestone": "B3",
+        "report_type": "behavior",
+        "purpose": "held_out",
+        "promotion_eligible": true,
+        "report_id": "0ad0259d-38ac-486f-aff4-2c46da2aec55",
+        "started_at": "2026-08-19T22:59:40.487057Z",
+        "finished_at": "2026-08-19T22:59:40.506716Z",
+        "fixture_file": "evals/tasks/b3h/suite.yaml",
+        "fixture_sha256": "d54c60e84822c577ecf785df308b389356ca625ab523764f922e1e8ff3e331d4",
+        "freeze_manifest_file": "evals/tasks/b3h/freeze.json",
+        "freeze_manifest_sha256": "18f9b661ba7e884a192e16f1db48f1560a2d70d613323884a25daf1ceae4fa39",
+        "database_file": "evals/baselines/b3h_explicit_belief/process-1/beliefs.db",
+        "database_sha256": "956c769d2022d377d627ab9f8716fe1912fff76a1650899cf8b91fffb90f48f2",
+        "cases": [
+          {
+            "fixture_id": "reactor_claim_refuted",
+            "final_state_sha256": "f762f03db2882ee43d5ad2e22528b90f24857c75a68af2c0236394334ae363ad",
+            "baseline": {
+              "status": "supported",
+              "answer": "The reactor is stable.",
+              "hypothesis_ids": [
+                "reactor-stability"
+              ],
+              "provenance_hashes": [
+                "2222222222222222222222222222222222222222222222222222222222222222"
+              ]
+            },
+            "belief": {
+              "status": "refuted",
+              "answer": "refuted:\n- The reactor is stable.",
+              "hypothesis_ids": [
+                "reactor-stability"
+              ],
+              "provenance_hashes": [
+                "1111111111111111111111111111111111111111111111111111111111111111",
+                "2222222222222222222222222222222222222222222222222222222222222222"
+              ]
+            },
+            "state_passed": true,
+            "baseline_passed": false,
+            "belief_passed": true,
+            "safety_passed": true
+          },
+          {
+            "fixture_id": "weak_sensor_cause",
+            "final_state_sha256": "2cfb1ff33812680ec0d018baba5dc804c798cc05764f6e4fa1a82a12149d54d0",
+            "baseline": {
+              "status": "supported",
+              "answer": "Sensor drift caused the navigation fault.",
+              "hypothesis_ids": [
+                "sensor-cause"
+              ],
+              "provenance_hashes": [
+                "3333333333333333333333333333333333333333333333333333333333333333"
+              ]
+            },
+            "belief": {
+              "status": "unknown",
+              "answer": "unknown: insufficient supported belief",
+              "hypothesis_ids": [],
+              "provenance_hashes": []
+            },
+            "state_passed": true,
+            "baseline_passed": false,
+            "belief_passed": true,
+            "safety_passed": true
+          },
+          {
+            "fixture_id": "conflicting_gate_modes",
+            "final_state_sha256": "68280c6e5a82f9572279279e2e487f1bb4d5861708c8b679a8e2ea22a892aab2",
+            "baseline": {
+              "status": "supported",
+              "answer": "The north gate mode is VIOLET-812.",
+              "hypothesis_ids": [
+                "gate-violet"
+              ],
+              "provenance_hashes": [
+                "5555555555555555555555555555555555555555555555555555555555555555"
+              ]
+            },
+            "belief": {
+              "status": "conflict",
+              "answer": "conflict:\n- The north gate mode is LIME-447.\n- The north gate mode is VIOLET-812.",
+              "hypothesis_ids": [
+                "gate-lime",
+                "gate-violet"
+              ],
+              "provenance_hashes": [
+                "4444444444444444444444444444444444444444444444444444444444444444",
+                "5555555555555555555555555555555555555555555555555555555555555555"
+              ]
+            },
+            "state_passed": true,
+            "baseline_passed": false,
+            "belief_passed": true,
+            "safety_passed": true
+          },
+          {
+            "fixture_id": "supported_archive_key",
+            "final_state_sha256": "0c2ae5ceca9277c5f118e1291c099d33c4ce48d691723c5ac7614d8e3a5743c9",
+            "baseline": {
+              "status": "supported",
+              "answer": "The verified archive key is ORBIT-356.",
+              "hypothesis_ids": [
+                "archive-key"
+              ],
+              "provenance_hashes": [
+                "6666666666666666666666666666666666666666666666666666666666666666"
+              ]
+            },
+            "belief": {
+              "status": "supported",
+              "answer": "The verified archive key is ORBIT-356.",
+              "hypothesis_ids": [
+                "archive-key"
+              ],
+              "provenance_hashes": [
+                "6666666666666666666666666666666666666666666666666666666666666666"
+              ]
+            },
+            "state_passed": true,
+            "baseline_passed": true,
+            "belief_passed": true,
+            "safety_passed": true
+          },
+          {
+            "fixture_id": "unresolved_ocean_relay",
+            "final_state_sha256": "8f7e3e2cf9c29f7a4bf305cd275431bafaa996a8bc15397aa1346883e931bc1d",
+            "baseline": {
+              "status": "unknown",
+              "answer": "unknown: no observation",
+              "hypothesis_ids": [],
+              "provenance_hashes": []
+            },
+            "belief": {
+              "status": "unknown",
+              "answer": "unknown: insufficient supported belief",
+              "hypothesis_ids": [],
+              "provenance_hashes": []
+            },
+            "state_passed": true,
+            "baseline_passed": true,
+            "belief_passed": true,
+            "safety_passed": true
+          },
+          {
+            "fixture_id": "cumulative_launch_support",
+            "final_state_sha256": "fc18d949f65d5ee465a2191092eb99d658146d09f3cdb76841f21302a65ca23c",
+            "baseline": {
+              "status": "supported",
+              "answer": "The launch window is DAWN-624.",
+              "hypothesis_ids": [
+                "launch-window"
+              ],
+              "provenance_hashes": [
+                "8888888888888888888888888888888888888888888888888888888888888888"
+              ]
+            },
+            "belief": {
+              "status": "supported",
+              "answer": "The launch window is DAWN-624.",
+              "hypothesis_ids": [
+                "launch-window"
+              ],
+              "provenance_hashes": [
+                "7777777777777777777777777777777777777777777777777777777777777777",
+                "8888888888888888888888888888888888888888888888888888888888888888"
+              ]
+            },
+            "state_passed": true,
+            "baseline_passed": true,
+            "belief_passed": true,
+            "safety_passed": true
+          },
+          {
+            "fixture_id": "supported_despite_weak_refutation",
+            "final_state_sha256": "fa3694c608b5e42bdb2dc52cc6b7500d4ed90fb1630414f54bc1fb8cecedb4dc",
+            "baseline": {
+              "status": "supported",
+              "answer": "The telemetry channel is authenticated.",
+              "hypothesis_ids": [
+                "telemetry-auth"
+              ],
+              "provenance_hashes": [
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+              ]
+            },
+            "belief": {
+              "status": "supported",
+              "answer": "The telemetry channel is authenticated.",
+              "hypothesis_ids": [
+                "telemetry-auth"
+              ],
+              "provenance_hashes": [
+                "9999999999999999999999999999999999999999999999999999999999999999",
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+              ]
+            },
+            "state_passed": true,
+            "baseline_passed": true,
+            "belief_passed": true,
+            "safety_passed": true
+          }
+        ],
+        "baseline_passed_cases": 4,
+        "belief_passed_cases": 7,
+        "state_passed_cases": 7,
+        "safety_passed_cases": 7,
+        "quality_delta": 0.4285714285714286,
+        "minimum_quality_delta": 0.2,
+        "quality_gate_passed": true,
+        "state_gate_passed": true,
+        "safety_gate_passed": true,
+        "engineering_gate_passed": true
+      }
+    },
+    {
+      "process_index": 2,
+      "process_id": 74138,
+      "report_file": "evals/baselines/b3h_explicit_belief/process-2/report.json",
+      "report_sha256": "c260bf0d866061e3b485ff13ad99a9c85faecb3114006fa8c7b15d838966a1d3",
+      "database_file": "evals/baselines/b3h_explicit_belief/process-2/beliefs.db",
+      "database_sha256": "956c769d2022d377d627ab9f8716fe1912fff76a1650899cf8b91fffb90f48f2",
+      "report": {
+        "schema_version": "1",
+        "milestone": "B3",
+        "report_type": "behavior",
+        "purpose": "held_out",
+        "promotion_eligible": true,
+        "report_id": "39e7e6fa-328f-4163-95e3-611bdcec0f3c",
+        "started_at": "2026-08-19T22:59:40.897088Z",
+        "finished_at": "2026-08-19T22:59:40.916479Z",
+        "fixture_file": "evals/tasks/b3h/suite.yaml",
+        "fixture_sha256": "d54c60e84822c577ecf785df308b389356ca625ab523764f922e1e8ff3e331d4",
+        "freeze_manifest_file": "evals/tasks/b3h/freeze.json",
+        "freeze_manifest_sha256": "18f9b661ba7e884a192e16f1db48f1560a2d70d613323884a25daf1ceae4fa39",
+        "database_file": "evals/baselines/b3h_explicit_belief/process-2/beliefs.db",
+        "database_sha256": "956c769d2022d377d627ab9f8716fe1912fff76a1650899cf8b91fffb90f48f2",
+        "cases": [
+          {
+            "fixture_id": "reactor_claim_refuted",
+            "final_state_sha256": "f762f03db2882ee43d5ad2e22528b90f24857c75a68af2c0236394334ae363ad",
+            "baseline": {
+              "status": "supported",
+              "answer": "The reactor is stable.",
+              "hypothesis_ids": [
+                "reactor-stability"
+              ],
+              "provenance_hashes": [
+                "2222222222222222222222222222222222222222222222222222222222222222"
+              ]
+            },
+            "belief": {
+              "status": "refuted",
+              "answer": "refuted:\n- The reactor is stable.",
+              "hypothesis_ids": [
+                "reactor-stability"
+              ],
+              "provenance_hashes": [
+                "1111111111111111111111111111111111111111111111111111111111111111",
+                "2222222222222222222222222222222222222222222222222222222222222222"
+              ]
+            },
+            "state_passed": true,
+            "baseline_passed": false,
+            "belief_passed": true,
+            "safety_passed": true
+          },
+          {
+            "fixture_id": "weak_sensor_cause",
+            "final_state_sha256": "2cfb1ff33812680ec0d018baba5dc804c798cc05764f6e4fa1a82a12149d54d0",
+            "baseline": {
+              "status": "supported",
+              "answer": "Sensor drift caused the navigation fault.",
+              "hypothesis_ids": [
+                "sensor-cause"
+              ],
+              "provenance_hashes": [
+                "3333333333333333333333333333333333333333333333333333333333333333"
+              ]
+            },
+            "belief": {
+              "status": "unknown",
+              "answer": "unknown: insufficient supported belief",
+              "hypothesis_ids": [],
+              "provenance_hashes": []
+            },
+            "state_passed": true,
+            "baseline_passed": false,
+            "belief_passed": true,
+            "safety_passed": true
+          },
+          {
+            "fixture_id": "conflicting_gate_modes",
+            "final_state_sha256": "68280c6e5a82f9572279279e2e487f1bb4d5861708c8b679a8e2ea22a892aab2",
+            "baseline": {
+              "status": "supported",
+              "answer": "The north gate mode is VIOLET-812.",
+              "hypothesis_ids": [
+                "gate-violet"
+              ],
+              "provenance_hashes": [
+                "5555555555555555555555555555555555555555555555555555555555555555"
+              ]
+            },
+            "belief": {
+              "status": "conflict",
+              "answer": "conflict:\n- The north gate mode is LIME-447.\n- The north gate mode is VIOLET-812.",
+              "hypothesis_ids": [
+                "gate-lime",
+                "gate-violet"
+              ],
+              "provenance_hashes": [
+                "4444444444444444444444444444444444444444444444444444444444444444",
+                "5555555555555555555555555555555555555555555555555555555555555555"
+              ]
+            },
+            "state_passed": true,
+            "baseline_passed": false,
+            "belief_passed": true,
+            "safety_passed": true
+          },
+          {
+            "fixture_id": "supported_archive_key",
+            "final_state_sha256": "0c2ae5ceca9277c5f118e1291c099d33c4ce48d691723c5ac7614d8e3a5743c9",
+            "baseline": {
+              "status": "supported",
+              "answer": "The verified archive key is ORBIT-356.",
+              "hypothesis_ids": [
+                "archive-key"
+              ],
+              "provenance_hashes": [
+                "6666666666666666666666666666666666666666666666666666666666666666"
+              ]
+            },
+            "belief": {
+              "status": "supported",
+              "answer": "The verified archive key is ORBIT-356.",
+              "hypothesis_ids": [
+                "archive-key"
+              ],
+              "provenance_hashes": [
+                "6666666666666666666666666666666666666666666666666666666666666666"
+              ]
+            },
+            "state_passed": true,
+            "baseline_passed": true,
+            "belief_passed": true,
+            "safety_passed": true
+          },
+          {
+            "fixture_id": "unresolved_ocean_relay",
+            "final_state_sha256": "8f7e3e2cf9c29f7a4bf305cd275431bafaa996a8bc15397aa1346883e931bc1d",
+            "baseline": {
+              "status": "unknown",
+              "answer": "unknown: no observation",
+              "hypothesis_ids": [],
+              "provenance_hashes": []
+            },
+            "belief": {
+              "status": "unknown",
+              "answer": "unknown: insufficient supported belief",
+              "hypothesis_ids": [],
+              "provenance_hashes": []
+            },
+            "state_passed": true,
+            "baseline_passed": true,
+            "belief_passed": true,
+            "safety_passed": true
+          },
+          {
+            "fixture_id": "cumulative_launch_support",
+            "final_state_sha256": "fc18d949f65d5ee465a2191092eb99d658146d09f3cdb76841f21302a65ca23c",
+            "baseline": {
+              "status": "supported",
+              "answer": "The launch window is DAWN-624.",
+              "hypothesis_ids": [
+                "launch-window"
+              ],
+              "provenance_hashes": [
+                "8888888888888888888888888888888888888888888888888888888888888888"
+              ]
+            },
+            "belief": {
+              "status": "supported",
+              "answer": "The launch window is DAWN-624.",
+              "hypothesis_ids": [
+                "launch-window"
+              ],
+              "provenance_hashes": [
+                "7777777777777777777777777777777777777777777777777777777777777777",
+                "8888888888888888888888888888888888888888888888888888888888888888"
+              ]
+            },
+            "state_passed": true,
+            "baseline_passed": true,
+            "belief_passed": true,
+            "safety_passed": true
+          },
+          {
+            "fixture_id": "supported_despite_weak_refutation",
+            "final_state_sha256": "fa3694c608b5e42bdb2dc52cc6b7500d4ed90fb1630414f54bc1fb8cecedb4dc",
+            "baseline": {
+              "status": "supported",
+              "answer": "The telemetry channel is authenticated.",
+              "hypothesis_ids": [
+                "telemetry-auth"
+              ],
+              "provenance_hashes": [
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+              ]
+            },
+            "belief": {
+              "status": "supported",
+              "answer": "The telemetry channel is authenticated.",
+              "hypothesis_ids": [
+                "telemetry-auth"
+              ],
+              "provenance_hashes": [
+                "9999999999999999999999999999999999999999999999999999999999999999",
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+              ]
+            },
+            "state_passed": true,
+            "baseline_passed": true,
+            "belief_passed": true,
+            "safety_passed": true
+          }
+        ],
+        "baseline_passed_cases": 4,
+        "belief_passed_cases": 7,
+        "state_passed_cases": 7,
+        "safety_passed_cases": 7,
+        "quality_delta": 0.4285714285714286,
+        "minimum_quality_delta": 0.2,
+        "quality_gate_passed": true,
+        "state_gate_passed": true,
+        "safety_gate_passed": true,
+        "engineering_gate_passed": true
+      }
+    },
+    {
+      "process_index": 3,
+      "process_id": 74139,
+      "report_file": "evals/baselines/b3h_explicit_belief/process-3/report.json",
+      "report_sha256": "4f7b53a38bdfd26bb6634c0a1bf5dc63dac690d39bd112c8945d5e1876b8b388",
+      "database_file": "evals/baselines/b3h_explicit_belief/process-3/beliefs.db",
+      "database_sha256": "956c769d2022d377d627ab9f8716fe1912fff76a1650899cf8b91fffb90f48f2",
+      "report": {
+        "schema_version": "1",
+        "milestone": "B3",
+        "report_type": "behavior",
+        "purpose": "held_out",
+        "promotion_eligible": true,
+        "report_id": "71d3dd46-59e8-461a-b355-4dfe3f99ebb6",
+        "started_at": "2026-08-19T22:59:41.259107Z",
+        "finished_at": "2026-08-19T22:59:41.277745Z",
+        "fixture_file": "evals/tasks/b3h/suite.yaml",
+        "fixture_sha256": "d54c60e84822c577ecf785df308b389356ca625ab523764f922e1e8ff3e331d4",
+        "freeze_manifest_file": "evals/tasks/b3h/freeze.json",
+        "freeze_manifest_sha256": "18f9b661ba7e884a192e16f1db48f1560a2d70d613323884a25daf1ceae4fa39",
+        "database_file": "evals/baselines/b3h_explicit_belief/process-3/beliefs.db",
+        "database_sha256": "956c769d2022d377d627ab9f8716fe1912fff76a1650899cf8b91fffb90f48f2",
+        "cases": [
+          {
+            "fixture_id": "reactor_claim_refuted",
+            "final_state_sha256": "f762f03db2882ee43d5ad2e22528b90f24857c75a68af2c0236394334ae363ad",
+            "baseline": {
+              "status": "supported",
+              "answer": "The reactor is stable.",
+              "hypothesis_ids": [
+                "reactor-stability"
+              ],
+              "provenance_hashes": [
+                "2222222222222222222222222222222222222222222222222222222222222222"
+              ]
+            },
+            "belief": {
+              "status": "refuted",
+              "answer": "refuted:\n- The reactor is stable.",
+              "hypothesis_ids": [
+                "reactor-stability"
+              ],
+              "provenance_hashes": [
+                "1111111111111111111111111111111111111111111111111111111111111111",
+                "2222222222222222222222222222222222222222222222222222222222222222"
+              ]
+            },
+            "state_passed": true,
+            "baseline_passed": false,
+            "belief_passed": true,
+            "safety_passed": true
+          },
+          {
+            "fixture_id": "weak_sensor_cause",
+            "final_state_sha256": "2cfb1ff33812680ec0d018baba5dc804c798cc05764f6e4fa1a82a12149d54d0",
+            "baseline": {
+              "status": "supported",
+              "answer": "Sensor drift caused the navigation fault.",
+              "hypothesis_ids": [
+                "sensor-cause"
+              ],
+              "provenance_hashes": [
+                "3333333333333333333333333333333333333333333333333333333333333333"
+              ]
+            },
+            "belief": {
+              "status": "unknown",
+              "answer": "unknown: insufficient supported belief",
+              "hypothesis_ids": [],
+              "provenance_hashes": []
+            },
+            "state_passed": true,
+            "baseline_passed": false,
+            "belief_passed": true,
+            "safety_passed": true
+          },
+          {
+            "fixture_id": "conflicting_gate_modes",
+            "final_state_sha256": "68280c6e5a82f9572279279e2e487f1bb4d5861708c8b679a8e2ea22a892aab2",
+            "baseline": {
+              "status": "supported",
+              "answer": "The north gate mode is VIOLET-812.",
+              "hypothesis_ids": [
+                "gate-violet"
+              ],
+              "provenance_hashes": [
+                "5555555555555555555555555555555555555555555555555555555555555555"
+              ]
+            },
+            "belief": {
+              "status": "conflict",
+              "answer": "conflict:\n- The north gate mode is LIME-447.\n- The north gate mode is VIOLET-812.",
+              "hypothesis_ids": [
+                "gate-lime",
+                "gate-violet"
+              ],
+              "provenance_hashes": [
+                "4444444444444444444444444444444444444444444444444444444444444444",
+                "5555555555555555555555555555555555555555555555555555555555555555"
+              ]
+            },
+            "state_passed": true,
+            "baseline_passed": false,
+            "belief_passed": true,
+            "safety_passed": true
+          },
+          {
+            "fixture_id": "supported_archive_key",
+            "final_state_sha256": "0c2ae5ceca9277c5f118e1291c099d33c4ce48d691723c5ac7614d8e3a5743c9",
+            "baseline": {
+              "status": "supported",
+              "answer": "The verified archive key is ORBIT-356.",
+              "hypothesis_ids": [
+                "archive-key"
+              ],
+              "provenance_hashes": [
+                "6666666666666666666666666666666666666666666666666666666666666666"
+              ]
+            },
+            "belief": {
+              "status": "supported",
+              "answer": "The verified archive key is ORBIT-356.",
+              "hypothesis_ids": [
+                "archive-key"
+              ],
+              "provenance_hashes": [
+                "6666666666666666666666666666666666666666666666666666666666666666"
+              ]
+            },
+            "state_passed": true,
+            "baseline_passed": true,
+            "belief_passed": true,
+            "safety_passed": true
+          },
+          {
+            "fixture_id": "unresolved_ocean_relay",
+            "final_state_sha256": "8f7e3e2cf9c29f7a4bf305cd275431bafaa996a8bc15397aa1346883e931bc1d",
+            "baseline": {
+              "status": "unknown",
+              "answer": "unknown: no observation",
+              "hypothesis_ids": [],
+              "provenance_hashes": []
+            },
+            "belief": {
+              "status": "unknown",
+              "answer": "unknown: insufficient supported belief",
+              "hypothesis_ids": [],
+              "provenance_hashes": []
+            },
+            "state_passed": true,
+            "baseline_passed": true,
+            "belief_passed": true,
+            "safety_passed": true
+          },
+          {
+            "fixture_id": "cumulative_launch_support",
+            "final_state_sha256": "fc18d949f65d5ee465a2191092eb99d658146d09f3cdb76841f21302a65ca23c",
+            "baseline": {
+              "status": "supported",
+              "answer": "The launch window is DAWN-624.",
+              "hypothesis_ids": [
+                "launch-window"
+              ],
+              "provenance_hashes": [
+                "8888888888888888888888888888888888888888888888888888888888888888"
+              ]
+            },
+            "belief": {
+              "status": "supported",
+              "answer": "The launch window is DAWN-624.",
+              "hypothesis_ids": [
+                "launch-window"
+              ],
+              "provenance_hashes": [
+                "7777777777777777777777777777777777777777777777777777777777777777",
+                "8888888888888888888888888888888888888888888888888888888888888888"
+              ]
+            },
+            "state_passed": true,
+            "baseline_passed": true,
+            "belief_passed": true,
+            "safety_passed": true
+          },
+          {
+            "fixture_id": "supported_despite_weak_refutation",
+            "final_state_sha256": "fa3694c608b5e42bdb2dc52cc6b7500d4ed90fb1630414f54bc1fb8cecedb4dc",
+            "baseline": {
+              "status": "supported",
+              "answer": "The telemetry channel is authenticated.",
+              "hypothesis_ids": [
+                "telemetry-auth"
+              ],
+              "provenance_hashes": [
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+              ]
+            },
+            "belief": {
+              "status": "supported",
+              "answer": "The telemetry channel is authenticated.",
+              "hypothesis_ids": [
+                "telemetry-auth"
+              ],
+              "provenance_hashes": [
+                "9999999999999999999999999999999999999999999999999999999999999999",
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+              ]
+            },
+            "state_passed": true,
+            "baseline_passed": true,
+            "belief_passed": true,
+            "safety_passed": true
+          }
+        ],
+        "baseline_passed_cases": 4,
+        "belief_passed_cases": 7,
+        "state_passed_cases": 7,
+        "safety_passed_cases": 7,
+        "quality_delta": 0.4285714285714286,
+        "minimum_quality_delta": 0.2,
+        "quality_gate_passed": true,
+        "state_gate_passed": true,
+        "safety_gate_passed": true,
+        "engineering_gate_passed": true
+      }
+    }
+  ],
+  "baseline_passed_runs": 12,
+  "belief_passed_runs": 21,
+  "state_passed_runs": 21,
+  "safety_passed_runs": 21,
+  "total_runs": 21,
+  "quality_delta": 0.4285714285714286,
+  "minimum_quality_delta": 0.2,
+  "quality_gate_passed": true,
+  "state_gate_passed": true,
+  "safety_gate_passed": true,
+  "reproducibility_gate_passed": true,
+  "promotion_gate_passed": true
+}

@@ -93,6 +93,10 @@ Working now:
   links, content-addressed observation replay, compact provenance context, and append-only revisions.
 - Separate non-promotion B3 development evaluator with deterministic replay, artifact integrity,
   offline regrading, and a passing five-case engineering result.
+- B3 belief-aware decision layer that reports refutations and conflicts, abstains on open beliefs,
+  and retains provenance instead of blindly trusting the latest observation.
+- Passing three-process frozen B3 held-out promotion with a +42.9-point quality delta over the
+  stateless latest-observation ablation and exact state, safety, and reproducibility gates.
 - Typed schemas for beliefs, actions, predicted outcomes, truth bounds, and logical facts.
 - Transparent MVP active-inference score with separately logged terms.
 - Hard policy and logical filtering before action scoring.
@@ -105,7 +109,7 @@ Not implemented yet:
 
 - Sandboxed Python and test execution tools.
 - Unified SQLite storage for runs, artifacts, evaluations, and later semantic/procedural memory.
-- B3 belief-state evaluation, calibrated extraction, and semantic memory.
+- Calibrated claim extraction and semantic memory.
 - Calibrated world-model prediction.
 
 ## Architecture
@@ -316,6 +320,14 @@ uv run aif-qwen-agent eval-b3-dev
 uv run aif-qwen-agent regrade-b3-dev
 ```
 
+Run or offline-regrade the frozen independent B3 promotion suite:
+
+```bash
+uv run aif-qwen-agent eval-b3
+uv run aif-qwen-agent regrade-b3 \
+  --report evals/baselines/b3h_explicit_belief/report.json
+```
+
 ## Repository map
 
 | Path | Purpose |
@@ -337,6 +349,8 @@ uv run aif-qwen-agent regrade-b3-dev
 | `src/aif_qwen_agent/b2_evaluation.py` | Two-session B2 runner, gates, traces, and offline regrade |
 | `src/aif_qwen_agent/b2_independent.py` | Cold-process orchestration and B2 promotion aggregation |
 | `src/aif_qwen_agent/b3_evaluation.py` | Non-promotion B3 state evaluator and offline regrade |
+| `src/aif_qwen_agent/belief_decision.py` | Belief-aware decision policy and stateless ablation |
+| `src/aif_qwen_agent/b3_behavior.py` | B3 behavior comparison, freeze, and independent promotion gate |
 | `src/aif_qwen_agent/agent.py` | Bounded one-step proposal, tool, answer, and trace lifecycle |
 | `src/aif_qwen_agent/b1_evaluation.py` | Shared-model B0/B1 quality, safety, and regrade pipeline |
 | `src/aif_qwen_agent/b1_reproducibility.py` | Repeated agreement, latency, memory, and cost gates |
@@ -352,6 +366,8 @@ uv run aif-qwen-agent regrade-b3-dev
 | `evals/tasks/b2h/` | Frozen post-remediation B2 held-out suite and hash manifest |
 | `evals/tasks/b3_dev/` | B3 confidence, contradiction, replay, and context development cases |
 | `evals/development/b3_dev/` | Hash-bound B3 development report and belief revision database |
+| `evals/tasks/b3h/` | Frozen unseen B3 behavioral held-out suite and source manifest |
+| `evals/baselines/b3h_explicit_belief/` | Three-process B3 promotion evidence |
 | `tests/` | Unit, integration, behavioral, safety, and regression checks |
 | `scripts/` | Model smoke test and future evaluation/promotion entry points |
 
@@ -761,9 +777,29 @@ reciprocal contradiction, unresolved-question replay, and compact provenance con
 exact revision, hypothesis, unresolved-question, context-safety, and persistence checks. Report
 `8ba1c026-5dea-428d-86f9-d52caf1c75eb` regrades entirely offline.
 
-This is development evidence, not B3 promotion. The next checkpoint is to connect explicit state to
-evidence-sensitive decisions and measure it against the promoted B2 path before designing a new frozen
-B3 held-out suite.
+The behavior layer uses explicit state to report supported claims, refutations, and conflicts, while
+abstaining when evidence remains open or unresolved. Its nearest ablation uses only the latest
+observation and ignores accumulated confidence, refutations, and alternatives.
+
+After a separate 5/5 development comparison, a seven-case unseen held-out suite was frozen with the
+exact state, decision, evaluator, context, and CLI source hashes before execution. Three independent
+processes produced:
+
+| Gate or metric | Result |
+|---|---:|
+| Stateless latest-observation baseline | 12/21 |
+| Explicit belief state | 21/21 |
+| Quality delta | +42.9 percentage points |
+| Exact final state | 21/21 |
+| Answer safety | 21/21 |
+| Cross-process reproducibility | PASS |
+| Promotion gate | PASS |
+
+Report `f3494ea7-aab9-47ec-80c5-f4110244591a` regrades entirely offline. B3 is promoted for the
+narrow frozen-suite claim that persistent confidence, refutation, contradiction, and unresolved-state
+handling improve deterministic evidence-sensitive decisions over a latest-observation baseline. No
+model was called, and this does not establish calibrated natural-language extraction, broad reasoning,
+or AGI. The next milestone is B4 active-inference action selection.
 
 ## Milestones
 

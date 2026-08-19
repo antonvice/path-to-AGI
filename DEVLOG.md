@@ -388,6 +388,26 @@ outputs, and accept promotion only if every configured aggregate gate passes.
 B2 is promoted only for the narrow frozen-suite claim that later sessions recover relevant verified
 evidence. The benchmark remains small and hand-authored. Next: B3 explicit belief state.
 
+## 2026-08-19 — B3a explicit belief-state core
+
+- Extended the typed belief state with content-addressed observations, revision numbers, applied
+  observation hashes, and reciprocal contradiction links.
+- Implemented deterministic bounded support/refute updates. Exact observation replay is idempotent;
+  reusing an observation ID with different content is rejected.
+- Added a B2 retrieval projection that converts verified outcomes into supported hypotheses with
+  episode/content-hash provenance while excluding source prose and prior task text.
+- Preserved conflicting retrieved outcomes as separate probability-1 hypotheses marked
+  `contradicted` and linked symmetrically; neither claim overwrites the other.
+- Added compact JSON-lines belief context explicitly labeled as untrusted data and containing only
+  claims, probabilities, statuses, contradiction IDs, and provenance—not evidence excerpts.
+- Added append-only SQLite belief revisions with canonical SHA-256 payload verification, contiguous
+  revision enforcement, history reads, idempotent writes, and tamper detection.
+- Added tests for bounded updates, deterministic replay, observation-ID collisions, conflict
+  retention, source-injection exclusion, unresolved questions, revision history, and corruption.
+
+This is a B3 implementation checkpoint, not promotion evidence. Next: build a separate B3 development
+suite and evaluator before freezing any B3 held-out benchmark.
+
 ## Commit history
 
 | Commit | Milestone |

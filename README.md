@@ -89,6 +89,8 @@ Working now:
   adversarial source prose, deterministic conflicts, and three abstention controls.
 - Passing three-cold-process `b2h` promotion evidence with exact behavioral agreement and all
   quality, safety, retrieval, reproducibility, and cost gates satisfied.
+- B3a explicit belief-state core with bounded deterministic updates, reciprocal contradiction
+  links, content-addressed observation replay, compact provenance context, and append-only revisions.
 - Typed schemas for beliefs, actions, predicted outcomes, truth bounds, and logical facts.
 - Transparent MVP active-inference score with separately logged terms.
 - Hard policy and logical filtering before action scoring.
@@ -101,7 +103,7 @@ Not implemented yet:
 
 - Sandboxed Python and test execution tools.
 - Unified SQLite storage for runs, artifacts, evaluations, and later semantic/procedural memory.
-- Durable belief updates or semantic memory.
+- B3 belief-state evaluation, calibrated extraction, and semantic memory.
 - Calibrated world-model prediction.
 
 ## Architecture
@@ -321,6 +323,8 @@ uv run aif-qwen-agent regrade-b2-suite \
 | `configs/memory_b2h.yaml` | Promotion-eligible schema-v2 held-out retrieval/context settings |
 | `src/aif_qwen_agent/schemas.py` | Typed beliefs, actions, predictions, and logical facts |
 | `src/aif_qwen_agent/memory.py` | Content-addressed verified episodes and SQLite FTS5 retrieval |
+| `src/aif_qwen_agent/belief.py` | Deterministic belief updates, B2 projection, and durable revisions |
+| `src/aif_qwen_agent/context.py` | Compact provenance-only belief context for model consumption |
 | `src/aif_qwen_agent/b2_evaluation.py` | Two-session B2 runner, gates, traces, and offline regrade |
 | `src/aif_qwen_agent/b2_independent.py` | Cold-process orchestration and B2 promotion aggregation |
 | `src/aif_qwen_agent/agent.py` | Bounded one-step proposal, tool, answer, and trace lifecycle |
@@ -723,6 +727,24 @@ Report `1b1e887d-35ef-4172-8887-44deb5b9db46` regraded entirely offline and the 
 afterward. This promotes B2 for the narrow frozen benchmark claim: later sessions recover relevant
 verified evidence across this hand-authored suite. It does not establish broad memory generalization
 or AGI. The next roadmap milestone is B3 explicit belief state.
+
+## B3a explicit belief-state core
+
+B3 begins by making the agent's uncertain state a typed, replayable object rather than hidden prompt
+text. A content-addressed observation supports or refutes one hypothesis using a bounded deterministic
+update. Applied observation IDs are bound to their full payload hashes: exact replay is a no-op, while
+reusing an ID with altered content is rejected.
+
+Verified B2 retrieval can now be projected into beliefs without copying source prose or prior tasks.
+Each hypothesis retains only its statement, probability, status, reciprocal contradiction links, and
+episode provenance hashes. Conflicting verified outcomes remain as separate `contradicted` hypotheses
+instead of allowing the newest value to overwrite the older one. No-hit retrieval creates an explicit
+unresolved question.
+
+Belief revisions are stored append-only in SQLite and verified against canonical SHA-256 payloads on
+every read. This is implementation evidence, not B3 promotion: the next checkpoint is a separate B3
+development suite measuring state accuracy, uncertainty updates, contradiction retention, replay, and
+whether explicit state improves evidence-sensitive behavior over the promoted B2 path.
 
 ## Milestones
 

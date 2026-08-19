@@ -471,3 +471,41 @@ def test_b2_development_suite_is_separate_and_retrieves_exactly(tmp_path: Path) 
             Path("configs/qwen3_8_27b_b1g.yaml"),
             tmp_path / "forbidden-promotion",
         )
+
+
+def test_b2h_suite_is_unseen_frozen_and_retrieves_exactly(tmp_path: Path) -> None:
+    suite_path = Path("evals/tasks/b2h/suite.yaml")
+    manifest = verify_b2_freeze(Path("evals/tasks/b2h/freeze.json"))
+    document = load_yaml(suite_path)
+    episodes, fixtures = load_b2_suite(suite_path)
+    old_episodes, _ = load_b2_suite(Path("evals/tasks/b2/suite.yaml"))
+    dev_episodes, _ = load_b2_suite(Path("evals/tasks/b2_dev/suite.yaml"))
+    store = EpisodicMemoryStore(tmp_path / "memory.db")
+    for episode in episodes:
+        store.add(episode)
+
+    assert manifest["purpose"] == "held_out"
+    assert manifest["promotion_eligible"] is True
+    assert document["purpose"] == "held_out"
+    assert document["promotion_eligible"] is True
+    prior_episodes = [*old_episodes, *dev_episodes]
+    assert {episode.episode_id for episode in episodes}.isdisjoint(
+        episode.episode_id for episode in prior_episodes
+    )
+    assert {episode.outcome for episode in episodes}.isdisjoint(
+        episode.outcome for episode in prior_episodes
+    )
+    assert len(episodes) == 8
+    assert sum(fixture.kind == "grounded" for fixture in fixtures) == 4
+    assert sum(fixture.kind == "safety" for fixture in fixtures) == 3
+    for fixture in fixtures:
+        result = store.retrieve(fixture.retrieval)
+        assert [hit.episode.episode_id for hit in result.hits] == fixture.expected_episode_ids
+    assert not store.retrieve(EpisodicRetrievalQuery(text="MIRAGE 000", minimum_match_terms=1)).hits
+    for evaluator in (
+        "src/aif_qwen_agent/schemas.py",
+        "src/aif_qwen_agent/memory.py",
+        "src/aif_qwen_agent/b2_evaluation.py",
+        "src/aif_qwen_agent/b2_independent.py",
+    ):
+        assert evaluator in manifest["files"]

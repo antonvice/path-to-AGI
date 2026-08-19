@@ -85,6 +85,8 @@ Working now:
   token cost failed, so B2 remains unpromoted.
 - Separate non-promotion `b2_dev` suite with schema-v2 precision filtering, compact outcome-only
   context, deterministic conflict resolution, and a passing one-process engineering result.
+- Newly frozen, inference-naive `b2h` held-out suite with unseen facts, dual lexical distractors,
+  adversarial source prose, deterministic conflicts, and three abstention controls.
 - Typed schemas for beliefs, actions, predicted outcomes, truth bounds, and logical facts.
 - Transparent MVP active-inference score with separately logged terms.
 - Hard policy and logical filtering before action scoring.
@@ -314,6 +316,7 @@ uv run aif-qwen-agent regrade-b2-suite \
 | `configs/evaluation.yaml` | Dataset splits and promotion gates |
 | `configs/memory.yaml` | B2 SQLite path, schema version, retrieval backend, and default limit |
 | `configs/memory_b2_dev.yaml` | Non-promotion schema-v2 retrieval/context development settings |
+| `configs/memory_b2h.yaml` | Promotion-eligible schema-v2 held-out retrieval/context settings |
 | `src/aif_qwen_agent/schemas.py` | Typed beliefs, actions, predictions, and logical facts |
 | `src/aif_qwen_agent/memory.py` | Content-addressed verified episodes and SQLite FTS5 retrieval |
 | `src/aif_qwen_agent/b2_evaluation.py` | Two-session B2 runner, gates, traces, and offline regrade |
@@ -330,6 +333,7 @@ uv run aif-qwen-agent regrade-b2-suite \
 | `src/aif_qwen_agent/tools/` | Typed tool lifecycle boundary |
 | `evals/tasks/` | Versioned behavioral and safety fixtures |
 | `evals/tasks/b2_dev/` | Separate B2 precision, compact-context, and conflict development suite |
+| `evals/tasks/b2h/` | Frozen post-remediation B2 held-out suite and hash manifest |
 | `tests/` | Unit, integration, behavioral, safety, and regression checks |
 | `scripts/` | Model smoke test and future evaluation/promotion entry points |
 
@@ -685,12 +689,22 @@ The digest-pinned one-process development run produced:
 Report `9352f332-594e-43ee-b6bc-13633db3bd9e` regraded offline. This is development evidence only,
 not a reversal of the failed B2 held-out result and not a promotion claim.
 
-## Next roadmap step
+## B2 post-remediation held-out freeze
 
-Keep both the failed held-out evidence and the passing development evidence immutable. The next
-valid promotion attempt requires a newly designed held-out suite with unseen facts and distractor
-structures, frozen before inference, followed by the existing three-cold-process evaluator. The
-development pass does not validate B2 by itself.
+`evals/tasks/b2h/` is frozen before any model inference. It contains eight unseen episodes and
+seven cases: four grounded cases, including dual lexical distractors and a two-record conflict,
+plus three safety cases for irrelevant memory, weak overlap, and source-injection lookup. Episode
+IDs, outcomes, source files, and code values are disjoint from both `b2` and `b2_dev`.
+
+The manifest binds the suite and every source, schema-v2 memory settings, evaluation and model
+configs, exact Ollama model digest, and the schemas, retrieval, evaluation, and independent-process
+evaluator source files. Offline validation confirmed exact expected retrieval for all seven cases
+and no searchable hit for the injected `MIRAGE-000` evidence term. No model process or generation
+command was run while designing or freezing this suite.
+
+Next, run the existing evaluator in exactly three cold independent processes and preserve all
+artifacts whether the result passes or fails. B2 remains unpromoted until quality, safety, exact
+retrieval, reproducibility, and cost pass together.
 
 ## Milestones
 

@@ -1,0 +1,1 @@
+pelican_observatory_phase: NOVA-273

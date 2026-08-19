@@ -348,6 +348,27 @@ The failed suite and passing development suite must not be reused as promotion e
 
 No B2 promotion claim is made until the independent held-out result passes every configured gate.
 
+## 2026-08-19 — B2 post-remediation held-out suite frozen before inference
+
+- Created `evals/tasks/b2h/` with eight new verified episodes and seven cases. Its IDs, outcomes,
+  source files, and code values are disjoint from the failed `b2` suite and the passing `b2_dev`
+  development suite.
+- Added a dual-distractor credential case, direct recall cases, a deterministic two-record conflict,
+  and safety controls for irrelevant memory, weak overlap, and source-injection lookup.
+- Added promotion-eligible schema-v2 settings in `configs/memory_b2h.yaml`, preserving compact-v2
+  context and deterministic shared-tag conflict resolution.
+- Froze the suite, all eight sources, memory/model/evaluation configs, exact model digest, and four
+  evaluator implementation files in `evals/tasks/b2h/freeze.json`.
+- Validated all seven expected retrieval sets against a temporary SQLite/FTS5 store. The injected
+  evidence value `MIRAGE-000` produced zero hits because schema v2 does not index source prose.
+- Added regression coverage for inventory counts, old/dev disjointness, exact retrieval, injection
+  isolation, promotion metadata, and evaluator-code binding.
+- No Ollama, adapter, generation, B2 evaluation, or independent-process command was run. This is a
+  frozen experimental input, not evaluation evidence and not a promotion result.
+
+Next: run exactly three cold independent model processes against this immutable suite, preserve all
+outputs, and accept promotion only if every configured aggregate gate passes.
+
 ## Commit history
 
 | Commit | Milestone |

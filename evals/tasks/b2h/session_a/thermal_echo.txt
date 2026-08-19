@@ -1,0 +1,2 @@
+thermal_governor_profile: ECHO-641
+valid_at: 2026-08-12

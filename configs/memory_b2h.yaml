@@ -1,0 +1,11 @@
+database: data/memory-b2h.db
+schema_version: "2"
+retrieval:
+  backend: sqlite_fts5
+  default_limit: 5
+  minimum_match_ratio: 0.75
+context:
+  profile: compact_v2
+conflict_resolution:
+  strategy: deterministic_shared_tags_v1
+promotion_eligible: true

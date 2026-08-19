@@ -1,0 +1,28 @@
+{
+  "schema_version": "1",
+  "milestone": "B2",
+  "purpose": "held_out",
+  "promotion_eligible": true,
+  "frozen_on": "2026-08-19",
+  "parent_commit": "747dd37f17e500da66dba5bde61f69615b9b90e1",
+  "model": "orcarouter/Qwen3.8-27B-Uncensored:iq4_xs",
+  "model_digest": "84e6355d6764e264ccdfe486243821e7000eaff08827557af4e3dc537c772c2a",
+  "files": {
+    "configs/qwen3_8_27b_b1g.yaml": "3b0015b22019814da53e92765aeea19bc65d2d4fd5580b1460883cbe611c59b8",
+    "configs/memory_b2h.yaml": "f53f5d8ba8b5eea7dc525e6cf4cd13cf3f27c08118ccca2323e62c72673ac669",
+    "configs/evaluation.yaml": "ddc9611d101ae8e2ed6e64cadf5e188c9689d6a2b9e5f161e952737b6d009024",
+    "evals/tasks/b2h/suite.yaml": "5de7bea98f7571fffa71f90b6b69a241b97552c3eac26b2952ef9f337ad0635c",
+    "evals/tasks/b2h/session_a/cedar_batch.txt": "c478d869ed8ece3a9b10416f4639f867301844ffa26e9619de5f3cfa7d54716c",
+    "evals/tasks/b2h/session_a/cobalt_token.txt": "1501fa70149f1ef4bdef0e93a7329d50acbbaabc3635f8402525138ca9a7928f",
+    "evals/tasks/b2h/session_a/pelican_phase.txt": "9db6c4699a42c45a8f91cca225c899c9ecea040e1943ab26c3daaaa71508871a",
+    "evals/tasks/b2h/session_a/quartz_credential.txt": "87d7b8eeeaf9b50a1087dfadd1e930acfb17fff7f61c8a2da59b6f77092924d2",
+    "evals/tasks/b2h/session_a/quartz_schedule.txt": "253746c226a51cdffd48e2bd6a82a0f3521fbd0e5e0fd2974706b15e57113111",
+    "evals/tasks/b2h/session_a/relay_audit.txt": "c2e544fd1e75ab6fb4abcfed54bcb254eea93e8b55ffd2324f05efdd8a747233",
+    "evals/tasks/b2h/session_a/thermal_echo.txt": "5e9c85c59b4cdf0c2a33b6fba712e21424be6b2c6f5576530471d6ac9b4c7d8d",
+    "evals/tasks/b2h/session_a/thermal_river.txt": "f2a4bab8c674165c5ee5012030b99210b1c0873053e4a178a8a2959fbb132db9",
+    "src/aif_qwen_agent/schemas.py": "468dcb5f89fc3faedd9d2c9851e34b4b8300851826db0102ac768614ca391df4",
+    "src/aif_qwen_agent/memory.py": "dfb05d028af8770ddd538677bf0b680ffc13efb456cd1afadbb65da7f7c2c8df",
+    "src/aif_qwen_agent/b2_evaluation.py": "73aaf5cfbe9eec5002520876bfcb99ac89d152d553e576f5f620a40663c123f2",
+    "src/aif_qwen_agent/b2_independent.py": "e12f22a5c84dd885935c5c3f817d62bd8cbcd9c83c448d0c9afcfeaf38a2130f"
+  }
+}

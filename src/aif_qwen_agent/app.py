@@ -35,6 +35,11 @@ from aif_qwen_agent.b2_evaluation import (
     load_b2_report,
     verify_b2_report,
 )
+from aif_qwen_agent.b2_independent import (
+    load_b2_independent_report,
+    run_b2_processes,
+    verify_b2_independent_report,
+)
 from aif_qwen_agent.baseline import BaselineRunner
 from aif_qwen_agent.config import load_yaml
 from aif_qwen_agent.evaluation import (
@@ -579,8 +584,8 @@ def regrade_b1g(report: Path = Path("artifacts/b1g/report.json")) -> None:
     )
 
 
-@app.command("eval-b2")
-def eval_b2(
+@app.command("eval-b2-suite")
+def eval_b2_suite(
     fixtures: Path = Path("evals/tasks/b2/suite.yaml"),
     freeze_manifest: Path = Path("evals/tasks/b2/freeze.json"),
     config: Path = Path("configs/qwen3_8_27b_b1g.yaml"),
@@ -590,7 +595,7 @@ def eval_b2(
     memory_traces: Path = Path("artifacts/b2/memory.jsonl"),
     report: Path = Path("artifacts/b2/report.json"),
 ) -> None:
-    """Run the frozen two-session B2 episodic retrieval suite once."""
+    """Run one B2 suite process; prefer eval-b2 for held-out evaluation."""
     baseline, memory = _build_b2_runners(
         config,
         memory_db,
@@ -629,13 +634,13 @@ def eval_b2(
     )
 
 
-@app.command("regrade-b2")
-def regrade_b2(
+@app.command("regrade-b2-suite")
+def regrade_b2_suite(
     report: Path = Path("artifacts/b2/report.json"),
     baseline_traces: Path = Path("artifacts/b2/baseline.jsonl"),
     memory_traces: Path = Path("artifacts/b2/memory.jsonl"),
 ) -> None:
-    """Verify B2 entirely from its frozen inputs and saved traces."""
+    """Verify one B2 process from its frozen inputs and saved traces."""
     result = load_b2_report(report)
     verify_b2_report(
         result,
@@ -648,6 +653,65 @@ def regrade_b2(
         f"quality={'PASS' if result.quality_gate_passed else 'FAIL'} "
         f"safety={'PASS' if result.safety_gate_passed else 'FAIL'} "
         f"retrieval={'PASS' if result.retrieval_gate_passed else 'FAIL'} "
+        f"cost={'PASS' if result.cost_gate_passed else 'FAIL'}"
+    )
+
+
+@app.command("eval-b2")
+def eval_b2(
+    fixtures: Path = Path("evals/tasks/b2/suite.yaml"),
+    freeze_manifest: Path = Path("evals/tasks/b2/freeze.json"),
+    config: Path = Path("configs/qwen3_8_27b_b1g.yaml"),
+    evaluation_config: Path = Path("configs/evaluation.yaml"),
+    output_dir: Path = Path("artifacts/b2-independent"),
+    processes: int = 3,
+) -> None:
+    """Run B2 in cold, independent processes and build its promotion gate."""
+    result = run_b2_processes(
+        fixtures,
+        freeze_manifest,
+        evaluation_config,
+        config,
+        output_dir,
+        processes,
+        status=lambda message: console.print(f"[dim]{message}[/dim]"),
+    )
+    table = Table("Process", "PID", "Cold load", "Suite gate")
+    for process in result.processes:
+        table.add_row(
+            str(process.process_index),
+            str(process.process_id),
+            f"{process.suite.model_load_seconds:.2f}s",
+            "PASS" if process.suite.engineering_gate_passed else "FAIL",
+        )
+    console.print(table)
+    console.print(
+        f"[dim]promotion={'PASS' if result.promotion_gate_passed else 'FAIL'} "
+        f"quality={'PASS' if result.quality_gate_passed else 'FAIL'} "
+        f"safety={'PASS' if result.safety_gate_passed else 'FAIL'} "
+        f"retrieval={'PASS' if result.retrieval_gate_passed else 'FAIL'} "
+        f"repro={'PASS' if result.reproducibility_gate_passed else 'FAIL'} "
+        f"cost={'PASS' if result.cost_gate_passed else 'FAIL'} "
+        f"quality_delta={result.quality_delta:.1%} "
+        f"grounded_token_cost={result.grounded_token_cost_increase:.1%} "
+        f"grounded_generation_cost={result.grounded_generation_cost_increase:.1%} "
+        f"report={output_dir / 'report.json'}[/dim]"
+    )
+
+
+@app.command("regrade-b2")
+def regrade_b2(report: Path = Path("artifacts/b2-independent/report.json")) -> None:
+    """Verify B2 entirely from frozen inputs, process reports, traces, and databases."""
+    result = load_b2_independent_report(report)
+    verify_b2_independent_report(result)
+    console.print(
+        f"verified report={result.report_id} "
+        f"promotion={'PASS' if result.promotion_gate_passed else 'FAIL'} "
+        f"processes={result.process_count} "
+        f"quality={'PASS' if result.quality_gate_passed else 'FAIL'} "
+        f"safety={'PASS' if result.safety_gate_passed else 'FAIL'} "
+        f"retrieval={'PASS' if result.retrieval_gate_passed else 'FAIL'} "
+        f"repro={'PASS' if result.reproducibility_gate_passed else 'FAIL'} "
         f"cost={'PASS' if result.cost_gate_passed else 'FAIL'}"
     )
 

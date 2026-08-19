@@ -238,6 +238,27 @@ Commit: `3a9828f` — `Freeze B2 two-session retrieval suite`
 This is still not a B2 promotion result. A three-process cold evaluator must be implemented and
 validated before the first held-out model call.
 
+Commit: `6769188` — `Add frozen B2 evaluation path`
+
+### Independent-process evaluator before held-out inference
+
+- Added a B2 aggregate schema requiring at least three distinct process IDs, contiguous process
+  indexes, positive cold-load evidence, and identical frozen model/configuration inputs.
+- Added isolated per-process SQLite databases, baseline traces, memory traces, and suite reports.
+- Integrity-checks each database against the frozen episodes and binds every process artifact by
+  SHA-256 in the aggregate.
+- Added strict cross-process agreement over baseline and memory outputs, ranked retrieval IDs,
+  statuses, token counts, grades, and safety flags.
+- Added aggregate quality, safety, exact-retrieval, reproducibility, grounded-cost, and promotion
+  gates plus full offline reconstruction.
+- Changed the public `eval-b2` command to orchestrate three cold child processes. The child-only
+  command is `eval-b2-suite`; `regrade-b2` verifies the complete aggregate.
+- Synthetic three-process tests pass promotion, detect one compromised process, and detect changed
+  artifacts. The full repository passes 89 tests, Ruff, strict mypy, and the frozen B1g regrade.
+
+The independent gate is implementation-complete but not yet committed at this point in the log.
+No B2 held-out model call has occurred.
+
 ## What the project has established
 
 - Typed tools plus verified evidence can improve file-grounded behavior over answer-only B0.
@@ -259,18 +280,15 @@ validated before the first held-out model call.
   controlled model-family comparison.
 - Local timing remains sensitive to memory pressure and host load.
 
-## Next: B2 independent-process evaluation
+## Next: B2 held-out execution
 
-The single-process B2 path is complete, but using it directly would spend held-out evidence before
-the reproducibility gate exists. The next implementation must:
+After committing and pushing the independent gate:
 
-1. launch at least three cold, independent harness processes with distinct PIDs;
-2. require Ollama to be unloaded before each process and record positive cold-load evidence;
-3. isolate each process's SQLite database, baseline traces, memory traces, and suite report;
-4. hash every per-process artifact and enforce exact case, retrieval, safety, and output agreement;
-5. aggregate grounded quality and cost without letting safety abstentions hide model expense;
-6. support a complete offline regrade from the B2 freeze, process reports, and traces;
-7. run the held-out suite only after that infrastructure passes synthetic tests.
+1. run the frozen suite once through the default three-process `eval-b2` command;
+2. confirm distinct PIDs, pre-process unloads, and positive cold loads;
+3. run `regrade-b2` without the model and preserve the complete evidence bundle;
+4. report every gate honestly, including a cost or reproducibility failure;
+5. do not alter the frozen suite or tune against its observed failures.
 
 No B2 promotion claim is made until the independent held-out result passes every configured gate.
 
@@ -290,6 +308,7 @@ No B2 promotion claim is made until the independent held-out result passes every
 | `7d480e2` | Passing B1g promotion evidence |
 | `c8fb951` | Verified B2 episodic memory store |
 | `3a9828f` | Frozen B2 two-session held-out suite |
+| `6769188` | Matched B2 evaluator, traces, gates, CLI, and synthetic tests |
 
 ## Reproduce the current checks
 

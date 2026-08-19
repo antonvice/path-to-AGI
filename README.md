@@ -80,6 +80,8 @@ Working now:
 - Frozen B2 two-session held-out suite plus a matched no-memory baseline, untrusted-context memory
   runner, evidence-hash citations, deterministic quality/safety/retrieval/cost gates, typed traces,
   and model-free offline regrading. The suite has not yet been run against the model.
+- B2 cold independent-process gate with isolated databases/traces, distinct process IDs, per-file
+  hashes, strict output/retrieval/token/grade agreement, and aggregate offline regrading.
 - Typed schemas for beliefs, actions, predicted outcomes, truth bounds, and logical facts.
 - Transparent MVP active-inference score with separately logged terms.
 - Hard policy and logical filtering before action scoring.
@@ -295,6 +297,7 @@ uv run aif-qwen-agent regrade-b2
 | `src/aif_qwen_agent/schemas.py` | Typed beliefs, actions, predictions, and logical facts |
 | `src/aif_qwen_agent/memory.py` | Content-addressed verified episodes and SQLite FTS5 retrieval |
 | `src/aif_qwen_agent/b2_evaluation.py` | Two-session B2 runner, gates, traces, and offline regrade |
+| `src/aif_qwen_agent/b2_independent.py` | Cold-process orchestration and B2 promotion aggregation |
 | `src/aif_qwen_agent/agent.py` | Bounded one-step proposal, tool, answer, and trace lifecycle |
 | `src/aif_qwen_agent/b1_evaluation.py` | Shared-model B0/B1 quality, safety, and regrade pipeline |
 | `src/aif_qwen_agent/b1_reproducibility.py` | Repeated agreement, latency, memory, and cost gates |
@@ -574,7 +577,7 @@ generalization beyond that suite or compare model families independently of the 
 
 ## B2 episodic retrieval in progress
 
-The B2 storage and single-process evaluation path is implemented without a held-out model call:
+The complete B2 evaluation path is implemented without a held-out model call:
 
 - only schema-valid, completed, verified episodes can become retrieval candidates;
 - each episode retains task, outcome, evidence excerpt, source URI, full source SHA-256, and tags;
@@ -592,18 +595,25 @@ The B2 storage and single-process evaluation path is implemented without a held-
   evidence citations;
 - offline regrading reconstructs every case and aggregate from frozen inputs and traces;
 - a separate synthetic suite passes all gates and proves that tampered reports and adversarial
-  instruction following are detected.
+  instruction following are detected;
+- `eval-b2` launches at least three distinct child harness processes and verifies an Ollama unload
+  before every process;
+- every process gets an isolated SQLite database, baseline trace, memory trace, and suite report;
+- the aggregate binds every artifact hash, requires positive cold-load evidence, and compares
+  outputs, retrieval IDs, statuses, token counts, grades, and safety flags across processes;
+- `regrade-b2` reconstructs the aggregate and verifies every frozen input, database, report, and
+  trace without loading the model.
 
 This is an implementation checkpoint, not B2 promotion. The frozen B2 suite has not yet been sent
 to the model.
 
 ## Next roadmap step
 
-Wrap the B2 suite in the same cold independent-process discipline used for B1g, require at least
-three distinct harness process IDs and strict output/retrieval agreement, then run the frozen suite
-exactly once per process. Promote only if quality, safety, retrieval, reproducibility, and cost all
-pass; otherwise preserve the failure evidence and revise against a new development suite rather
-than tuning on held-out cases. Keep B1d, B1f, B1g, and the B2 freeze immutable.
+Checkpoint and push the independent evaluator, then run `eval-b2` once with the default three cold
+processes. Regrade the resulting aggregate offline and preserve the evidence whether it passes or
+fails. Promote only if quality, safety, retrieval, reproducibility, and cost all pass; otherwise
+revise against a new development suite rather than tuning on held-out cases. Keep B1d, B1f, B1g,
+and the B2 freeze immutable.
 
 ## Milestones
 

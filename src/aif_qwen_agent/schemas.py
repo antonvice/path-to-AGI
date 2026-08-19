@@ -1627,6 +1627,265 @@ class B2EvaluationReport(BaseModel):
         return self
 
 
+class B2CaseReproducibility(BaseModel):
+    fixture_id: str = Field(min_length=1)
+    kind: Literal["grounded", "safety"]
+    baseline_run_ids: list[UUID] = Field(min_length=2)
+    memory_run_ids: list[UUID] = Field(min_length=2)
+    baseline_outputs: list[str | None] = Field(min_length=2)
+    memory_outputs: list[str | None] = Field(min_length=2)
+    retrieved_episode_ids: list[list[UUID]] = Field(min_length=2)
+    statuses: list[Literal["completed", "no_memory", "failed"]] = Field(min_length=2)
+    token_counts: list[tuple[int, int, int, int]] = Field(min_length=2)
+    grades: list[tuple[bool, bool, bool]] = Field(min_length=2)
+    violations: list[tuple[bool, bool]] = Field(min_length=2)
+    baseline_output_agreement: bool
+    memory_output_agreement: bool
+    retrieval_agreement: bool
+    status_agreement: bool
+    token_agreement: bool
+    grade_agreement: bool
+    safety_agreement: bool
+    all_agreement: bool
+
+    @model_validator(mode="after")
+    def agreement_matches_process_vectors(self) -> "B2CaseReproducibility":
+        vectors = (
+            self.baseline_run_ids,
+            self.memory_run_ids,
+            self.baseline_outputs,
+            self.memory_outputs,
+            self.retrieved_episode_ids,
+            self.statuses,
+            self.token_counts,
+            self.grades,
+            self.violations,
+        )
+        if len({len(values) for values in vectors}) != 1:
+            raise ValueError("B2 reproducibility vectors must have equal length")
+
+        def agrees(values: list[Any]) -> bool:
+            return all(value == values[0] for value in values[1:])
+
+        expected = (
+            agrees(self.baseline_outputs),
+            agrees(self.memory_outputs),
+            agrees(self.retrieved_episode_ids),
+            agrees(self.statuses),
+            agrees(self.token_counts),
+            agrees(self.grades),
+            agrees(self.violations),
+        )
+        actual = (
+            self.baseline_output_agreement,
+            self.memory_output_agreement,
+            self.retrieval_agreement,
+            self.status_agreement,
+            self.token_agreement,
+            self.grade_agreement,
+            self.safety_agreement,
+        )
+        if actual != expected or self.all_agreement != all(expected):
+            raise ValueError("B2 agreement flags do not match process vectors")
+        return self
+
+
+class B2ProcessArtifact(BaseModel):
+    process_index: int = Field(gt=0)
+    process_id: int = Field(gt=0)
+    model_unloaded_before: Literal[True] = True
+    suite_report_file: str = Field(min_length=1)
+    suite_report_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    baseline_traces_file: str = Field(min_length=1)
+    baseline_traces_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    memory_traces_file: str = Field(min_length=1)
+    memory_traces_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    memory_database_file: str = Field(min_length=1)
+    memory_database_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    suite: B2EvaluationReport
+
+    @model_validator(mode="after")
+    def contains_cold_b2_suite(self) -> "B2ProcessArtifact":
+        if self.suite.model_load_seconds <= 0.0:
+            raise ValueError("independent B2 process must contain a cold model load")
+        return self
+
+
+class B2IndependentEvaluationReport(BaseModel):
+    schema_version: Literal["1"] = "1"
+    report_type: Literal["b2_independent"] = "b2_independent"
+    report_id: UUID
+    milestone: Literal["B2"] = "B2"
+    started_at: AwareDatetime
+    finished_at: AwareDatetime
+    fixture_file: str
+    fixture_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    freeze_manifest_file: str
+    freeze_manifest_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    evaluation_config_file: str
+    evaluation_config_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    agent_config_file: str
+    agent_config_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    model: ModelIdentity
+    generation: GenerationConfig
+    process_count: int = Field(ge=3)
+    processes: list[B2ProcessArtifact] = Field(min_length=3)
+    comparisons: list[B2CaseReproducibility] = Field(min_length=1)
+    grounded_runs: int = Field(gt=0)
+    safety_runs: int = Field(gt=0)
+    baseline_passed_runs: int = Field(ge=0)
+    memory_passed_runs: int = Field(ge=0)
+    safety_passed_runs: int = Field(ge=0)
+    retrieval_passed_runs: int = Field(ge=0)
+    safety_violations: int = Field(ge=0)
+    instruction_following_violations: int = Field(ge=0)
+    grounded_baseline_input_tokens: int = Field(ge=0)
+    grounded_baseline_output_tokens: int = Field(ge=0)
+    grounded_memory_input_tokens: int = Field(ge=0)
+    grounded_memory_output_tokens: int = Field(ge=0)
+    model_load_seconds: float = Field(gt=0.0)
+    grounded_baseline_generation_seconds: float = Field(gt=0.0)
+    grounded_memory_generation_seconds: float = Field(ge=0.0)
+    quality_delta: float
+    grounded_token_cost_increase: float = Field(ge=-1.0)
+    grounded_generation_cost_increase: float = Field(ge=-1.0)
+    minimum_success_delta: UnitInterval
+    maximum_cost_increase: UnitInterval
+    quality_gate_passed: bool
+    safety_gate_passed: bool
+    retrieval_gate_passed: bool
+    reproducibility_gate_passed: bool
+    cost_gate_passed: bool
+    promotion_gate_passed: bool
+
+    @model_validator(mode="after")
+    def independent_b2_aggregates_match_processes(self) -> "B2IndependentEvaluationReport":
+        if self.finished_at < self.started_at:
+            raise ValueError("finished_at cannot precede started_at")
+        if self.process_count != len(self.processes):
+            raise ValueError("B2 process count does not match process artifacts")
+        if [process.process_index for process in self.processes] != list(
+            range(1, self.process_count + 1)
+        ):
+            raise ValueError("B2 process indexes must be contiguous")
+        if len({process.process_id for process in self.processes}) != self.process_count:
+            raise ValueError("B2 requires distinct operating-system process IDs")
+        suites = [process.suite for process in self.processes]
+        if any(
+            suite.model != self.model
+            or suite.generation != self.generation
+            or suite.fixture_sha256 != self.fixture_sha256
+            or suite.freeze_manifest_sha256 != self.freeze_manifest_sha256
+            or suite.evaluation_config_sha256 != self.evaluation_config_sha256
+            or suite.seed_content_sha256s != suites[0].seed_content_sha256s
+            for suite in suites
+        ):
+            raise ValueError("B2 independent suite inputs differ")
+        grounded = [case for suite in suites for case in suite.cases if case.kind == "grounded"]
+        expected = (
+            len(grounded),
+            sum(suite.safety_cases for suite in suites),
+            sum(suite.baseline_passed_cases for suite in suites),
+            sum(suite.memory_passed_cases for suite in suites),
+            sum(suite.safety_passed_cases for suite in suites),
+            sum(suite.retrieval_passed_cases for suite in suites),
+            sum(suite.safety_violations for suite in suites),
+            sum(suite.instruction_following_violations for suite in suites),
+            sum(case.baseline_input_tokens for case in grounded),
+            sum(case.baseline_output_tokens for case in grounded),
+            sum(case.memory_input_tokens for case in grounded),
+            sum(case.memory_output_tokens for case in grounded),
+        )
+        actual = (
+            self.grounded_runs,
+            self.safety_runs,
+            self.baseline_passed_runs,
+            self.memory_passed_runs,
+            self.safety_passed_runs,
+            self.retrieval_passed_runs,
+            self.safety_violations,
+            self.instruction_following_violations,
+            self.grounded_baseline_input_tokens,
+            self.grounded_baseline_output_tokens,
+            self.grounded_memory_input_tokens,
+            self.grounded_memory_output_tokens,
+        )
+        if actual != expected:
+            raise ValueError("B2 independent aggregates do not match suites")
+        if len(self.comparisons) != len(suites[0].cases) or any(
+            len(comparison.memory_run_ids) != self.process_count for comparison in self.comparisons
+        ):
+            raise ValueError("B2 comparisons do not match independent processes")
+        if [comparison.fixture_id for comparison in self.comparisons] != [
+            case.fixture_id for case in suites[0].cases
+        ]:
+            raise ValueError("B2 comparisons do not match suite cases")
+        expected_load = sum(suite.model_load_seconds for suite in suites)
+        expected_timings = (
+            sum(case.baseline_generation_seconds for case in grounded),
+            sum(case.memory_generation_seconds for case in grounded),
+        )
+        if abs(self.model_load_seconds - expected_load) > 1e-12 or any(
+            abs(recorded - calculated) > 1e-12
+            for recorded, calculated in zip(
+                (
+                    self.grounded_baseline_generation_seconds,
+                    self.grounded_memory_generation_seconds,
+                ),
+                expected_timings,
+                strict=True,
+            )
+        ):
+            raise ValueError("B2 independent timings do not match suites")
+        baseline_tokens = self.grounded_baseline_input_tokens + self.grounded_baseline_output_tokens
+        memory_tokens = self.grounded_memory_input_tokens + self.grounded_memory_output_tokens
+        if baseline_tokens == 0:
+            raise ValueError("B2 grounded cost comparison requires nonzero baseline tokens")
+        expected_deltas = (
+            self.memory_passed_runs / self.grounded_runs
+            - self.baseline_passed_runs / self.grounded_runs,
+            memory_tokens / baseline_tokens - 1.0,
+            self.grounded_memory_generation_seconds / self.grounded_baseline_generation_seconds
+            - 1.0,
+        )
+        if any(
+            abs(recorded - calculated) > 1e-12
+            for recorded, calculated in zip(
+                (
+                    self.quality_delta,
+                    self.grounded_token_cost_increase,
+                    self.grounded_generation_cost_increase,
+                ),
+                expected_deltas,
+                strict=True,
+            )
+        ):
+            raise ValueError("B2 independent quality or cost deltas do not match suites")
+        expected_gates = (
+            self.quality_delta >= self.minimum_success_delta,
+            self.safety_passed_runs == self.safety_runs
+            and self.safety_violations == 0
+            and self.instruction_following_violations == 0,
+            self.retrieval_passed_runs == self.grounded_runs + self.safety_runs,
+            all(comparison.all_agreement for comparison in self.comparisons),
+            max(
+                self.grounded_token_cost_increase,
+                self.grounded_generation_cost_increase,
+            )
+            <= self.maximum_cost_increase,
+        )
+        actual_gates = (
+            self.quality_gate_passed,
+            self.safety_gate_passed,
+            self.retrieval_gate_passed,
+            self.reproducibility_gate_passed,
+            self.cost_gate_passed,
+        )
+        if actual_gates != expected_gates or self.promotion_gate_passed != all(expected_gates):
+            raise ValueError("B2 promotion gate flags do not match outcomes")
+        return self
+
+
 class Hypothesis(BaseModel):
     id: str
     statement: str

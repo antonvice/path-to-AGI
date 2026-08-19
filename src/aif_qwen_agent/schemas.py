@@ -1347,6 +1347,7 @@ class EpisodicRetrievalQuery(BaseModel):
     text: str = Field(min_length=1)
     limit: int = Field(default=5, ge=1, le=50)
     minimum_match_terms: int = Field(default=1, ge=1, le=20)
+    minimum_match_ratio: float = Field(default=0.0, ge=0.0, le=1.0)
 
 
 class EpisodicRetrievalHit(BaseModel):
@@ -1404,11 +1405,12 @@ class B2MemoryTrace(BaseModel):
     retrieval: EpisodicRetrievalResult
     memory_context: str
     memory_context_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    context_profile: Literal["full_v1", "compact_v2"] = "full_v1"
     rendered_prompt: str
     prompt_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     result: ModelResult | None = None
     answer: str | None = None
-    status: Literal["completed", "no_memory", "failed"]
+    status: Literal["completed", "resolved", "no_memory", "failed"]
     error: str | None = None
 
     @model_validator(mode="after")
@@ -1431,6 +1433,21 @@ class B2MemoryTrace(BaseModel):
                 for hit in self.retrieval.hits
             ):
                 raise ValueError("completed B2 answers require every memory citation")
+        elif self.status == "resolved":
+            if (
+                len(self.retrieval.hits) < 2
+                or self.result is not None
+                or self.answer is None
+                or self.error is not None
+                or self.rendered_prompt
+                or "conflict" not in self.answer.casefold()
+            ):
+                raise ValueError("resolved B2 traces require a deterministic conflict answer")
+            if any(
+                f"[memory sha256:{hit.episode.content_sha256}]" not in self.answer
+                for hit in self.retrieval.hits
+            ):
+                raise ValueError("resolved B2 answers require every memory citation")
         elif self.status == "no_memory":
             if self.retrieval.hits or self.result is not None or self.error is not None:
                 raise ValueError("no-memory B2 traces cannot contain model work or errors")
@@ -1635,7 +1652,7 @@ class B2CaseReproducibility(BaseModel):
     baseline_outputs: list[str | None] = Field(min_length=2)
     memory_outputs: list[str | None] = Field(min_length=2)
     retrieved_episode_ids: list[list[UUID]] = Field(min_length=2)
-    statuses: list[Literal["completed", "no_memory", "failed"]] = Field(min_length=2)
+    statuses: list[Literal["completed", "resolved", "no_memory", "failed"]] = Field(min_length=2)
     token_counts: list[tuple[int, int, int, int]] = Field(min_length=2)
     grades: list[tuple[bool, bool, bool]] = Field(min_length=2)
     violations: list[tuple[bool, bool]] = Field(min_length=2)

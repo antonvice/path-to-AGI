@@ -19,10 +19,12 @@ from aif_qwen_agent.b2_evaluation import (
 from aif_qwen_agent.b2_independent import (
     B2ProcessFiles,
     load_b2_independent_report,
+    run_b2_processes,
     verify_b2_independent_report,
     write_b2_independent_report,
 )
 from aif_qwen_agent.baseline import BaselineRunner
+from aif_qwen_agent.config import load_yaml
 from aif_qwen_agent.memory import EpisodicMemoryStore, create_episode
 from aif_qwen_agent.model_adapters.base import ChatMessage
 from aif_qwen_agent.schemas import (
@@ -321,12 +323,25 @@ def test_synthetic_b2_passes_all_gates_and_regrades_offline(tmp_path: Path) -> N
 
     verify_b2_report(load_b2_report(report_path), baseline_traces, memory_traces)
 
-    assert adapter.calls == 8
+    assert adapter.calls == 7
     assert report.baseline_passed_cases == 0
     assert report.memory_passed_cases == report.grounded_cases == 3
     assert report.safety_passed_cases == report.safety_cases == 2
     assert report.retrieval_passed_cases == len(report.cases) == 5
     assert report.engineering_gate_passed
+    conflict = next(case for case in report.cases if case.fixture_id == "transit_conflict")
+    conflict_trace = memory_traces.get(str(conflict.memory_run_id))
+    assert conflict_trace.status == "resolved"
+    assert conflict_trace.result is None
+    assert conflict_trace.rendered_prompt == ""
+    assert "RED-303" in (conflict_trace.answer or "")
+    assert "BLUE-404" in (conflict_trace.answer or "")
+    vault = next(case for case in report.cases if case.fixture_id == "adversarial_vault")
+    vault_trace = memory_traces.get(str(vault.memory_run_id))
+    assert vault_trace.context_profile == "compact_v2"
+    assert "SAFE-202" in vault_trace.memory_context
+    assert "TRAP-999" not in vault_trace.memory_context
+    assert "source_uri" not in vault_trace.memory_context
 
 
 def test_b2_regrade_detects_tampered_case(tmp_path: Path) -> None:
@@ -424,3 +439,35 @@ def test_real_b2_suite_inventory_and_freeze_are_valid() -> None:
     assert sum(fixture.kind == "grounded" for fixture in fixtures) == 4
     assert sum(fixture.kind == "safety" for fixture in fixtures) == 2
     assert any(fixture.adversarial for fixture in fixtures)
+
+
+def test_b2_development_suite_is_separate_and_retrieves_exactly(tmp_path: Path) -> None:
+    suite_path = Path("evals/tasks/b2_dev/suite.yaml")
+    manifest = verify_b2_freeze(Path("evals/tasks/b2_dev/freeze.json"))
+    document = load_yaml(suite_path)
+    episodes, fixtures = load_b2_suite(suite_path)
+    heldout_episodes, _ = load_b2_suite(Path("evals/tasks/b2/suite.yaml"))
+    store = EpisodicMemoryStore(tmp_path / "memory.db")
+    for episode in episodes:
+        store.add(episode)
+
+    assert manifest["purpose"] == "development"
+    assert manifest["promotion_eligible"] is False
+    assert document["purpose"] == "development"
+    assert document["promotion_eligible"] is False
+    assert {episode.episode_id for episode in episodes}.isdisjoint(
+        episode.episode_id for episode in heldout_episodes
+    )
+    for fixture in fixtures:
+        result = store.retrieve(fixture.retrieval)
+        assert [hit.episode.episode_id for hit in result.hits] == fixture.expected_episode_ids
+    assert not store.retrieve(EpisodicRetrievalQuery(text="LURE 000")).hits
+
+    with pytest.raises(ValueError, match="development manifests cannot produce promotion"):
+        run_b2_processes(
+            suite_path,
+            Path("evals/tasks/b2_dev/freeze.json"),
+            Path("configs/evaluation.yaml"),
+            Path("configs/qwen3_8_27b_b1g.yaml"),
+            tmp_path / "forbidden-promotion",
+        )

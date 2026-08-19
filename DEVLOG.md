@@ -284,6 +284,35 @@ Commit: `306325d` — `Add independent B2 promotion gate`
 B2 is not promoted. The observed suite must remain immutable; remediation belongs on a separate
 development suite followed by a newly frozen held-out evaluation.
 
+### Separate B2 development remediation
+
+- Created `evals/tasks/b2_dev/` with six new episodes and six new cases. IDs, facts, sources, and
+  prompts are disjoint from the failed held-out suite.
+- Marked the manifest `purpose: development` and `promotion_eligible: false`; independent promotion
+  orchestration rejects development manifests before creating output.
+- Added schema-v2 retrieval while retaining schema-v1 database verification for the committed
+  held-out artifacts.
+- Restricted the v2 search index to verified outcomes and tags, excluding prior-task and source
+  prose, and added a minimum matched-term ratio. The atlas-key case now rejects an atlas-registry
+  snapshot distractor, and the injected `LURE-000` terms are not searchable.
+- Added compact-v2 context containing only verified outcomes and content hashes. Source excerpts,
+  source paths, prior tasks, and the injected `LURE-000` instruction are not sent to the model.
+- Added deterministic conflict resolution for distinct outcomes sharing conflict tags. It returned
+  both `AMBER-311` and `INDIGO-744` with both citations and made no model call.
+- Preserved deterministic no-hit abstention, content-addressed citations, integrity checks, and
+  offline report reconstruction.
+- The digest-pinned development run passed 4/4 grounded, 2/2 safety, and 6/6 exact retrieval with
+  zero violations.
+- Grounded tokens were 505 versus B0's 486, a 3.9% increase within the +25% ceiling. Grounded
+  generation was 3.16 seconds versus 44.81 seconds, a 92.9% reduction.
+- Offline regrade verified report `9352f332-594e-43ee-b6bc-13633db3bd9e`; Ollama was unloaded after
+  the run.
+- The repository now passes 95 tests, and the original failed held-out aggregate still regrades
+  with unchanged fixture, freeze-manifest, and report hashes.
+
+This is a one-process development engineering pass. It is neither held-out evidence nor B2
+promotion.
+
 ## What the project has established
 
 - Typed tools plus verified evidence can improve file-grounded behavior over answer-only B0.
@@ -305,18 +334,17 @@ development suite followed by a newly frozen held-out evaluation.
   controlled model-family comparison.
 - Local timing remains sensitive to memory pressure and host load.
 
-## Next: B2 retrieval and cost remediation
+## Next: a new B2 held-out suite
 
-The failed held-out suite is evidence, not a new development set. Next:
+The failed suite and passing development suite must not be reused as promotion evidence. Next:
 
-1. freeze it permanently and commit the complete failed evidence bundle;
-2. create a separate development suite with new facts and overlapping lexical distractors;
-3. test higher-precision retrieval without deleting legitimate contradictory episodes;
-4. render compact verified outcomes and provenance instead of full repeated episode text;
-5. make conflict handling deterministic or demonstrate reliable model synthesis on development
-   cases;
-6. preserve the no-hit, adversarial-instruction, integrity, and offline-regrade guarantees;
-7. freeze a new held-out suite before making another promotion attempt.
+1. design new facts and distractor structures without recycling either suite's identifiers;
+2. include direct recall, lexical near-neighbors, conflicting outcomes, irrelevant memory, weak
+   overlap, and adversarial source prose;
+3. bind the new suite, sources, schema-v2 memory config, model digest, and evaluation config before
+   inference;
+4. run exactly three cold independent processes and preserve all outputs whether they pass or fail;
+5. require quality, safety, exact retrieval, reproducibility, and cost to pass together.
 
 No B2 promotion claim is made until the independent held-out result passes every configured gate.
 
@@ -338,6 +366,7 @@ No B2 promotion claim is made until the independent held-out result passes every
 | `3a9828f` | Frozen B2 two-session held-out suite |
 | `6769188` | Matched B2 evaluator, traces, gates, CLI, and synthetic tests |
 | `306325d` | Three-process B2 promotion evaluator |
+| `7fb7654` | Failed B2 held-out promotion evidence |
 
 ## Reproduce the current checks
 

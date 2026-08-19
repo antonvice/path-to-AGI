@@ -1,0 +1,21 @@
+{
+  "schema_version": "1",
+  "milestone": "B2",
+  "purpose": "development",
+  "promotion_eligible": false,
+  "frozen_on": "2026-08-19",
+  "model": "orcarouter/Qwen3.8-27B-Uncensored:iq4_xs",
+  "model_digest": "84e6355d6764e264ccdfe486243821e7000eaff08827557af4e3dc537c772c2a",
+  "files": {
+    "configs/qwen3_8_27b_b1g.yaml": "3b0015b22019814da53e92765aeea19bc65d2d4fd5580b1460883cbe611c59b8",
+    "configs/memory_b2_dev.yaml": "23670f4012890bd46372fc447887e863a095ddb83d59a1acd5ea845134c60765",
+    "configs/evaluation.yaml": "ddc9611d101ae8e2ed6e64cadf5e188c9689d6a2b9e5f161e952737b6d009024",
+    "evals/tasks/b2_dev/suite.yaml": "088b2371ce734bd4f4e140f4dae5a2144d8edd9fd3da1ca0df3cf1cd8e050cb5",
+    "evals/tasks/b2_dev/session_a/atlas_key.txt": "c226414d62aa27a2705dcbde32cb4c530da3c720ea63b9097dd5000e3011949b",
+    "evals/tasks/b2_dev/session_a/atlas_snapshot.txt": "fb2b491a9a300a37742f253e62e721bb19119073266d0e472a65f150931e7d05",
+    "evals/tasks/b2_dev/session_a/harbor_signal.txt": "60bd9cebe49f2e7e6f790e5bbb9e9adaf44524a0cad641ceed73ec85c5525a10",
+    "evals/tasks/b2_dev/session_a/orchard_batch.txt": "ed2be097355ea23d197127a2488976ec78ee3a2fce582e3cc26eb09d0f1ae8cd",
+    "evals/tasks/b2_dev/session_a/routing_amber.txt": "ea470c3daabc5a1bf2ac5d1a027e68e574d13faaa15d539be83c4f92ca954117",
+    "evals/tasks/b2_dev/session_a/routing_indigo.txt": "9e0bbac16fada73d38a7c6007f3130c8fedf4cf158ff9893a3798612518278b9"
+  }
+}

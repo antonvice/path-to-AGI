@@ -83,6 +83,8 @@ Working now:
   hashes, strict output/retrieval/token/grade agreement, and aggregate offline regrading.
 - Preserved three-process B2 held-out evidence: quality and safety passed, but exact retrieval and
   token cost failed, so B2 remains unpromoted.
+- Separate non-promotion `b2_dev` suite with schema-v2 precision filtering, compact outcome-only
+  context, deterministic conflict resolution, and a passing one-process engineering result.
 - Typed schemas for beliefs, actions, predicted outcomes, truth bounds, and logical facts.
 - Transparent MVP active-inference score with separately logged terms.
 - Hard policy and logical filtering before action scoring.
@@ -283,6 +285,22 @@ uv run aif-qwen-agent eval-b2
 uv run aif-qwen-agent regrade-b2
 ```
 
+Run and regrade the separate development suite without producing a promotion report:
+
+```bash
+uv run aif-qwen-agent eval-b2-suite \
+  --fixtures evals/tasks/b2_dev/suite.yaml \
+  --freeze-manifest evals/tasks/b2_dev/freeze.json \
+  --memory-db artifacts/b2-dev/memory.db \
+  --baseline-traces artifacts/b2-dev/baseline.jsonl \
+  --memory-traces artifacts/b2-dev/memory.jsonl \
+  --report artifacts/b2-dev/report.json
+uv run aif-qwen-agent regrade-b2-suite \
+  --report artifacts/b2-dev/report.json \
+  --baseline-traces artifacts/b2-dev/baseline.jsonl \
+  --memory-traces artifacts/b2-dev/memory.jsonl
+```
+
 ## Repository map
 
 | Path | Purpose |
@@ -295,6 +313,7 @@ uv run aif-qwen-agent regrade-b2
 | `configs/logic.yaml` | Active logic backend and bounded inference settings |
 | `configs/evaluation.yaml` | Dataset splits and promotion gates |
 | `configs/memory.yaml` | B2 SQLite path, schema version, retrieval backend, and default limit |
+| `configs/memory_b2_dev.yaml` | Non-promotion schema-v2 retrieval/context development settings |
 | `src/aif_qwen_agent/schemas.py` | Typed beliefs, actions, predictions, and logical facts |
 | `src/aif_qwen_agent/memory.py` | Content-addressed verified episodes and SQLite FTS5 retrieval |
 | `src/aif_qwen_agent/b2_evaluation.py` | Two-session B2 runner, gates, traces, and offline regrade |
@@ -310,6 +329,7 @@ uv run aif-qwen-agent regrade-b2
 | `src/aif_qwen_agent/model_adapters/` | Replaceable model boundary and local Transformers adapter |
 | `src/aif_qwen_agent/tools/` | Typed tool lifecycle boundary |
 | `evals/tasks/` | Versioned behavioral and safety fixtures |
+| `evals/tasks/b2_dev/` | Separate B2 precision, compact-context, and conflict development suite |
 | `tests/` | Unit, integration, behavioral, safety, and regression checks |
 | `scripts/` | Model smoke test and future evaluation/promotion entry points |
 
@@ -630,12 +650,47 @@ conflict. The immutable aggregate is
 `evals/baselines/b2_qwen3_8_27b_ollama/report.json`; offline regrade passed and Ollama was empty
 afterward.
 
+## B2 development remediation result
+
+The failed held-out suite and its evidence remain unchanged. Remediation was developed on six new
+episodes and six new cases under `evals/tasks/b2_dev/`, with disjoint IDs, facts, and source files.
+Its manifest is explicitly `purpose: development` and `promotion_eligible: false`; the independent
+promotion evaluator rejects such manifests.
+
+The generic changes are:
+
+- schema-v2 retrieval indexes verified outcomes and tags, excluding prior-task and source prose
+  that can add boilerplate, distractors, or injected terms;
+- query coverage can require both a minimum term count and minimum matched-term ratio;
+- schema-v1 databases remain readable, integrity-checkable, and offline-regradable;
+- compact-v2 context sends only each verified outcome and content hash to the model, excluding
+  source prose, prior tasks, and embedded source instructions;
+- multiple distinct outcomes with shared conflict tags are resolved deterministically, preserving
+  every outcome and content-hash citation without a model call;
+- no-hit abstention remains deterministic and model-free.
+
+The digest-pinned one-process development run produced:
+
+| Gate or metric | Result |
+|---|---:|
+| Grounded B0 | 0/4 |
+| Grounded episodic memory | 4/4 |
+| Safety | 2/2, zero violations |
+| Exact retrieval | 6/6 |
+| Quality delta | +100 percentage points |
+| Grounded tokens | 505 vs 486 — 3.9% increase |
+| Grounded generation | 3.16s vs 44.81s — 92.9% reduction |
+| Quality, safety, retrieval, and cost gates | PASS |
+
+Report `9352f332-594e-43ee-b6bc-13633db3bd9e` regraded offline. This is development evidence only,
+not a reversal of the failed B2 held-out result and not a promotion claim.
+
 ## Next roadmap step
 
-Keep the failed B2 suite immutable. Build a separate development suite for lexical distractors,
-conflicting verified outcomes, and compact context, then improve retrieval precision and token cost
-there. Only after those generic changes pass should a new held-out suite be frozen for another
-promotion attempt. Do not claim that fixes tuned after observing this suite validate B2.
+Keep both the failed held-out evidence and the passing development evidence immutable. The next
+valid promotion attempt requires a newly designed held-out suite with unseen facts and distractor
+structures, frozen before inference, followed by the existing three-cold-process evaluator. The
+development pass does not validate B2 by itself.
 
 ## Milestones
 

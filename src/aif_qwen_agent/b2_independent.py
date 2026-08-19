@@ -45,6 +45,8 @@ def _all_equal(values: Sequence[object]) -> bool:
 
 def _bound_model(config: Path, freeze_manifest: Path) -> tuple[ModelIdentity, GenerationConfig]:
     manifest = verify_b2_freeze(freeze_manifest)
+    if manifest.get("promotion_eligible") is False:
+        raise ValueError("B2 development manifests cannot produce promotion reports")
     settings = load_yaml(config)
     model_settings = settings["model"]
     local_path = model_settings.get("local_path")

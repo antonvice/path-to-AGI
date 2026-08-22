@@ -1,0 +1,706 @@
+{
+  "schema_version": "1",
+  "milestone": "B4",
+  "report_type": "development",
+  "promotion_eligible": false,
+  "report_id": "a8178a9a-d9e7-40fa-8e87-7e8729f0a20c",
+  "started_at": "2026-08-22T13:15:51.760272Z",
+  "finished_at": "2026-08-22T13:15:51.767813Z",
+  "fixture_file": "evals/tasks/b4_dev/suite.yaml",
+  "fixture_sha256": "574bf337623f29e305cf9587dc7376f213b3ae5abc34d1c3e97d73aa96631401",
+  "config_file": "configs/aif_b4_dev.yaml",
+  "config_sha256": "3951c0da128f2050408c49ae3db1cb8f7b95d8db2d03fe420079959bead1e010",
+  "cases": [
+    {
+      "fixture_id": "dependency_failure_diagnostic",
+      "trace": {
+        "schema_version": "1",
+        "state_sha256": "3b626287f0ef2f1a9d78715c05033b10924c2dc5d79572dc91a8a69ae61c7eb8",
+        "evaluations": [
+          {
+            "action": {
+              "id": "answer_now",
+              "kind": "answer",
+              "arguments": {},
+              "advances": [
+                "finish"
+              ],
+              "predicted_observations": [],
+              "permission_level": "read",
+              "failure_recovery": null
+            },
+            "prediction": {
+              "success_probability": 0.9,
+              "expected_goal_progress": 0.75,
+              "expected_information_gain": 0.0,
+              "ambiguity": 0.1,
+              "token_cost": 0.05,
+              "wall_time_cost": 0.05,
+              "operational_risk": 0.0
+            },
+            "eligible": true,
+            "rejection_reasons": [],
+            "score": {
+              "preference_risk": 0.25,
+              "failure_risk": 0.024999999999999994,
+              "ambiguity": 0.034999999999999996,
+              "information_gain": -0.0,
+              "token_cost": 0.0075,
+              "wall_time_cost": 0.0075,
+              "operational_risk": 0.0,
+              "total": 0.325
+            },
+            "score_without_information_gain": {
+              "preference_risk": 0.25,
+              "failure_risk": 0.024999999999999994,
+              "ambiguity": 0.034999999999999996,
+              "information_gain": -0.0,
+              "token_cost": 0.0075,
+              "wall_time_cost": 0.0075,
+              "operational_risk": 0.0,
+              "total": 0.325
+            }
+          },
+          {
+            "action": {
+              "id": "run_diagnostic_tests",
+              "kind": "run_tests",
+              "arguments": {},
+              "advances": [
+                "h1",
+                "h2",
+                "h3"
+              ],
+              "predicted_observations": [],
+              "permission_level": "read",
+              "failure_recovery": null
+            },
+            "prediction": {
+              "success_probability": 0.85,
+              "expected_goal_progress": 0.62,
+              "expected_information_gain": 0.8,
+              "ambiguity": 0.05,
+              "token_cost": 0.25,
+              "wall_time_cost": 0.35,
+              "operational_risk": 0.02
+            },
+            "eligible": true,
+            "rejection_reasons": [],
+            "score": {
+              "preference_risk": 0.38,
+              "failure_risk": 0.037500000000000006,
+              "ambiguity": 0.017499999999999998,
+              "information_gain": -0.48,
+              "token_cost": 0.0375,
+              "wall_time_cost": 0.0525,
+              "operational_risk": 0.04,
+              "total": 0.08500000000000002
+            },
+            "score_without_information_gain": {
+              "preference_risk": 0.38,
+              "failure_risk": 0.037500000000000006,
+              "ambiguity": 0.017499999999999998,
+              "information_gain": -0.0,
+              "token_cost": 0.0375,
+              "wall_time_cost": 0.0525,
+              "operational_risk": 0.04,
+              "total": 0.5650000000000001
+            }
+          }
+        ],
+        "selected_action_id": "run_diagnostic_tests",
+        "selected_without_information_gain_id": "answer_now",
+        "epistemic_term_changed_selection": true
+      },
+      "state_sha256": "3b626287f0ef2f1a9d78715c05033b10924c2dc5d79572dc91a8a69ae61c7eb8",
+      "trace_sha256": "53634428e5131abad20702fbb4d67f22ae2d513686f3788fdf899c40a2ff28e7",
+      "selected_action_id": "run_diagnostic_tests",
+      "selected_without_information_gain_id": "answer_now",
+      "exact_selection_passed": true,
+      "ablation_passed": true,
+      "hard_filter_passed": true,
+      "telemetry_passed": true,
+      "epistemic_contribution_passed": true,
+      "passed": true
+    },
+    {
+      "fixture_id": "ambiguous_user_intent",
+      "trace": {
+        "schema_version": "1",
+        "state_sha256": "4f2849335c29412be1a02211a10a7f4f68e4a96b71194be1a7d1245470b24d6f",
+        "evaluations": [
+          {
+            "action": {
+              "id": "ask_environment",
+              "kind": "ask_user",
+              "arguments": {},
+              "advances": [
+                "h1",
+                "h2"
+              ],
+              "predicted_observations": [],
+              "permission_level": "read",
+              "failure_recovery": null
+            },
+            "prediction": {
+              "success_probability": 0.95,
+              "expected_goal_progress": 0.3,
+              "expected_information_gain": 0.9,
+              "ambiguity": 0.1,
+              "token_cost": 0.08,
+              "wall_time_cost": 0.05,
+              "operational_risk": 0.0
+            },
+            "eligible": true,
+            "rejection_reasons": [],
+            "score": {
+              "preference_risk": 0.7,
+              "failure_risk": 0.012500000000000011,
+              "ambiguity": 0.034999999999999996,
+              "information_gain": -0.54,
+              "token_cost": 0.012,
+              "wall_time_cost": 0.0075,
+              "operational_risk": 0.0,
+              "total": 0.22699999999999992
+            },
+            "score_without_information_gain": {
+              "preference_risk": 0.7,
+              "failure_risk": 0.012500000000000011,
+              "ambiguity": 0.034999999999999996,
+              "information_gain": -0.0,
+              "token_cost": 0.012,
+              "wall_time_cost": 0.0075,
+              "operational_risk": 0.0,
+              "total": 0.767
+            }
+          },
+          {
+            "action": {
+              "id": "assume_staging",
+              "kind": "answer",
+              "arguments": {},
+              "advances": [
+                "finish"
+              ],
+              "predicted_observations": [],
+              "permission_level": "read",
+              "failure_recovery": null
+            },
+            "prediction": {
+              "success_probability": 0.6,
+              "expected_goal_progress": 0.6,
+              "expected_information_gain": 0.0,
+              "ambiguity": 0.6,
+              "token_cost": 0.05,
+              "wall_time_cost": 0.02,
+              "operational_risk": 0.0
+            },
+            "eligible": true,
+            "rejection_reasons": [],
+            "score": {
+              "preference_risk": 0.4,
+              "failure_risk": 0.1,
+              "ambiguity": 0.21,
+              "information_gain": -0.0,
+              "token_cost": 0.0075,
+              "wall_time_cost": 0.003,
+              "operational_risk": 0.0,
+              "total": 0.7205
+            },
+            "score_without_information_gain": {
+              "preference_risk": 0.4,
+              "failure_risk": 0.1,
+              "ambiguity": 0.21,
+              "information_gain": -0.0,
+              "token_cost": 0.0075,
+              "wall_time_cost": 0.003,
+              "operational_risk": 0.0,
+              "total": 0.7205
+            }
+          }
+        ],
+        "selected_action_id": "ask_environment",
+        "selected_without_information_gain_id": "assume_staging",
+        "epistemic_term_changed_selection": true
+      },
+      "state_sha256": "4f2849335c29412be1a02211a10a7f4f68e4a96b71194be1a7d1245470b24d6f",
+      "trace_sha256": "3b2c11822e2c39e0f79bfe5d90064e9eeeb65e5cf5329e5d0ec6c97ea20fbda9",
+      "selected_action_id": "ask_environment",
+      "selected_without_information_gain_id": "assume_staging",
+      "exact_selection_passed": true,
+      "ablation_passed": true,
+      "hard_filter_passed": true,
+      "telemetry_passed": true,
+      "epistemic_contribution_passed": true,
+      "passed": true
+    },
+    {
+      "fixture_id": "hard_policy_precedes_value",
+      "trace": {
+        "schema_version": "1",
+        "state_sha256": "285ed7c4f4bb6920a0fb6839794d7269f2d707c5d41c300075054097ccbf6462",
+        "evaluations": [
+          {
+            "action": {
+              "id": "disable_auth",
+              "kind": "run_python",
+              "arguments": {},
+              "advances": [],
+              "predicted_observations": [],
+              "permission_level": "production_write",
+              "failure_recovery": null
+            },
+            "prediction": {
+              "success_probability": 1.0,
+              "expected_goal_progress": 1.0,
+              "expected_information_gain": 1.0,
+              "ambiguity": 0.0,
+              "token_cost": 0.0,
+              "wall_time_cost": 0.0,
+              "operational_risk": 0.0
+            },
+            "eligible": false,
+            "rejection_reasons": [
+              "policy:fixture_denied_action"
+            ],
+            "score": null,
+            "score_without_information_gain": null
+          },
+          {
+            "action": {
+              "id": "inspect_logs",
+              "kind": "read_file",
+              "arguments": {},
+              "advances": [],
+              "predicted_observations": [],
+              "permission_level": "read",
+              "failure_recovery": null
+            },
+            "prediction": {
+              "success_probability": 0.75,
+              "expected_goal_progress": 0.45,
+              "expected_information_gain": 0.35,
+              "ambiguity": 0.15,
+              "token_cost": 0.1,
+              "wall_time_cost": 0.1,
+              "operational_risk": 0.02
+            },
+            "eligible": true,
+            "rejection_reasons": [],
+            "score": {
+              "preference_risk": 0.55,
+              "failure_risk": 0.0625,
+              "ambiguity": 0.0525,
+              "information_gain": -0.21,
+              "token_cost": 0.015,
+              "wall_time_cost": 0.015,
+              "operational_risk": 0.04,
+              "total": 0.525
+            },
+            "score_without_information_gain": {
+              "preference_risk": 0.55,
+              "failure_risk": 0.0625,
+              "ambiguity": 0.0525,
+              "information_gain": -0.0,
+              "token_cost": 0.015,
+              "wall_time_cost": 0.015,
+              "operational_risk": 0.04,
+              "total": 0.7350000000000001
+            }
+          }
+        ],
+        "selected_action_id": "inspect_logs",
+        "selected_without_information_gain_id": "inspect_logs",
+        "epistemic_term_changed_selection": false
+      },
+      "state_sha256": "285ed7c4f4bb6920a0fb6839794d7269f2d707c5d41c300075054097ccbf6462",
+      "trace_sha256": "51aaf09d2ce906862814a55b754b317e23a4a2cceb02c4cebdc958c3633d6126",
+      "selected_action_id": "inspect_logs",
+      "selected_without_information_gain_id": "inspect_logs",
+      "exact_selection_passed": true,
+      "ablation_passed": true,
+      "hard_filter_passed": true,
+      "telemetry_passed": true,
+      "epistemic_contribution_passed": true,
+      "passed": true
+    },
+    {
+      "fixture_id": "supported_answer_avoids_needless_search",
+      "trace": {
+        "schema_version": "1",
+        "state_sha256": "b39e36d8347ff39655bc346bce65253d5fc0ccda6c67414e80724a1c49577003",
+        "evaluations": [
+          {
+            "action": {
+              "id": "answer_verified",
+              "kind": "answer",
+              "arguments": {},
+              "advances": [
+                "finish"
+              ],
+              "predicted_observations": [],
+              "permission_level": "read",
+              "failure_recovery": null
+            },
+            "prediction": {
+              "success_probability": 0.95,
+              "expected_goal_progress": 0.95,
+              "expected_information_gain": 0.05,
+              "ambiguity": 0.03,
+              "token_cost": 0.02,
+              "wall_time_cost": 0.01,
+              "operational_risk": 0.0
+            },
+            "eligible": true,
+            "rejection_reasons": [],
+            "score": {
+              "preference_risk": 0.050000000000000044,
+              "failure_risk": 0.012500000000000011,
+              "ambiguity": 0.010499999999999999,
+              "information_gain": -0.03,
+              "token_cost": 0.003,
+              "wall_time_cost": 0.0015,
+              "operational_risk": 0.0,
+              "total": 0.047500000000000056
+            },
+            "score_without_information_gain": {
+              "preference_risk": 0.050000000000000044,
+              "failure_risk": 0.012500000000000011,
+              "ambiguity": 0.010499999999999999,
+              "information_gain": -0.0,
+              "token_cost": 0.003,
+              "wall_time_cost": 0.0015,
+              "operational_risk": 0.0,
+              "total": 0.07750000000000005
+            }
+          },
+          {
+            "action": {
+              "id": "search_again",
+              "kind": "retrieve_memory",
+              "arguments": {},
+              "advances": [
+                "h1"
+              ],
+              "predicted_observations": [],
+              "permission_level": "read",
+              "failure_recovery": null
+            },
+            "prediction": {
+              "success_probability": 0.9,
+              "expected_goal_progress": 0.3,
+              "expected_information_gain": 0.4,
+              "ambiguity": 0.1,
+              "token_cost": 0.2,
+              "wall_time_cost": 0.2,
+              "operational_risk": 0.0
+            },
+            "eligible": true,
+            "rejection_reasons": [],
+            "score": {
+              "preference_risk": 0.7,
+              "failure_risk": 0.024999999999999994,
+              "ambiguity": 0.034999999999999996,
+              "information_gain": -0.24,
+              "token_cost": 0.03,
+              "wall_time_cost": 0.03,
+              "operational_risk": 0.0,
+              "total": 0.58
+            },
+            "score_without_information_gain": {
+              "preference_risk": 0.7,
+              "failure_risk": 0.024999999999999994,
+              "ambiguity": 0.034999999999999996,
+              "information_gain": -0.0,
+              "token_cost": 0.03,
+              "wall_time_cost": 0.03,
+              "operational_risk": 0.0,
+              "total": 0.82
+            }
+          }
+        ],
+        "selected_action_id": "answer_verified",
+        "selected_without_information_gain_id": "answer_verified",
+        "epistemic_term_changed_selection": false
+      },
+      "state_sha256": "b39e36d8347ff39655bc346bce65253d5fc0ccda6c67414e80724a1c49577003",
+      "trace_sha256": "76debf73736778f7032f8db46808f777973296745a7c7814a6295c1201a49fec",
+      "selected_action_id": "answer_verified",
+      "selected_without_information_gain_id": "answer_verified",
+      "exact_selection_passed": true,
+      "ablation_passed": true,
+      "hard_filter_passed": true,
+      "telemetry_passed": true,
+      "epistemic_contribution_passed": true,
+      "passed": true
+    },
+    {
+      "fixture_id": "verification_beats_risky_search",
+      "trace": {
+        "schema_version": "1",
+        "state_sha256": "415b112c11d14d73551f1e4173adcd05025dbe892cd31cd6365d30eab03dda05",
+        "evaluations": [
+          {
+            "action": {
+              "id": "answer_unverified",
+              "kind": "answer",
+              "arguments": {},
+              "advances": [
+                "finish"
+              ],
+              "predicted_observations": [],
+              "permission_level": "read",
+              "failure_recovery": null
+            },
+            "prediction": {
+              "success_probability": 0.75,
+              "expected_goal_progress": 0.7,
+              "expected_information_gain": 0.0,
+              "ambiguity": 0.3,
+              "token_cost": 0.02,
+              "wall_time_cost": 0.01,
+              "operational_risk": 0.0
+            },
+            "eligible": true,
+            "rejection_reasons": [],
+            "score": {
+              "preference_risk": 0.30000000000000004,
+              "failure_risk": 0.0625,
+              "ambiguity": 0.105,
+              "information_gain": -0.0,
+              "token_cost": 0.003,
+              "wall_time_cost": 0.0015,
+              "operational_risk": 0.0,
+              "total": 0.47200000000000003
+            },
+            "score_without_information_gain": {
+              "preference_risk": 0.30000000000000004,
+              "failure_risk": 0.0625,
+              "ambiguity": 0.105,
+              "information_gain": -0.0,
+              "token_cost": 0.003,
+              "wall_time_cost": 0.0015,
+              "operational_risk": 0.0,
+              "total": 0.47200000000000003
+            }
+          },
+          {
+            "action": {
+              "id": "risky_external_search",
+              "kind": "search_web",
+              "arguments": {},
+              "advances": [
+                "h1"
+              ],
+              "predicted_observations": [],
+              "permission_level": "read",
+              "failure_recovery": null
+            },
+            "prediction": {
+              "success_probability": 0.9,
+              "expected_goal_progress": 0.9,
+              "expected_information_gain": 0.5,
+              "ambiguity": 0.05,
+              "token_cost": 0.2,
+              "wall_time_cost": 0.3,
+              "operational_risk": 0.7
+            },
+            "eligible": true,
+            "rejection_reasons": [],
+            "score": {
+              "preference_risk": 0.09999999999999998,
+              "failure_risk": 0.024999999999999994,
+              "ambiguity": 0.017499999999999998,
+              "information_gain": -0.3,
+              "token_cost": 0.03,
+              "wall_time_cost": 0.045,
+              "operational_risk": 1.4,
+              "total": 1.3175
+            },
+            "score_without_information_gain": {
+              "preference_risk": 0.09999999999999998,
+              "failure_risk": 0.024999999999999994,
+              "ambiguity": 0.017499999999999998,
+              "information_gain": -0.0,
+              "token_cost": 0.03,
+              "wall_time_cost": 0.045,
+              "operational_risk": 1.4,
+              "total": 1.6175
+            }
+          },
+          {
+            "action": {
+              "id": "verify_artifact",
+              "kind": "verify",
+              "arguments": {},
+              "advances": [
+                "h1"
+              ],
+              "predicted_observations": [],
+              "permission_level": "read",
+              "failure_recovery": null
+            },
+            "prediction": {
+              "success_probability": 0.8,
+              "expected_goal_progress": 0.6,
+              "expected_information_gain": 0.25,
+              "ambiguity": 0.1,
+              "token_cost": 0.1,
+              "wall_time_cost": 0.1,
+              "operational_risk": 0.05
+            },
+            "eligible": true,
+            "rejection_reasons": [],
+            "score": {
+              "preference_risk": 0.4,
+              "failure_risk": 0.04999999999999999,
+              "ambiguity": 0.034999999999999996,
+              "information_gain": -0.15,
+              "token_cost": 0.015,
+              "wall_time_cost": 0.015,
+              "operational_risk": 0.1,
+              "total": 0.465
+            },
+            "score_without_information_gain": {
+              "preference_risk": 0.4,
+              "failure_risk": 0.04999999999999999,
+              "ambiguity": 0.034999999999999996,
+              "information_gain": -0.0,
+              "token_cost": 0.015,
+              "wall_time_cost": 0.015,
+              "operational_risk": 0.1,
+              "total": 0.615
+            }
+          }
+        ],
+        "selected_action_id": "verify_artifact",
+        "selected_without_information_gain_id": "answer_unverified",
+        "epistemic_term_changed_selection": true
+      },
+      "state_sha256": "415b112c11d14d73551f1e4173adcd05025dbe892cd31cd6365d30eab03dda05",
+      "trace_sha256": "7d72350308b9fddcc6b08390a466ee67bffa72fbfdb6707866ec105503d3f544",
+      "selected_action_id": "verify_artifact",
+      "selected_without_information_gain_id": "answer_unverified",
+      "exact_selection_passed": true,
+      "ablation_passed": true,
+      "hard_filter_passed": true,
+      "telemetry_passed": true,
+      "epistemic_contribution_passed": true,
+      "passed": true
+    },
+    {
+      "fixture_id": "deterministic_tie_break",
+      "trace": {
+        "schema_version": "1",
+        "state_sha256": "a33a259c4361f00c0e7b571c079c3b2a94b3f163339de379912a63364345cab1",
+        "evaluations": [
+          {
+            "action": {
+              "id": "answer_a",
+              "kind": "answer",
+              "arguments": {},
+              "advances": [
+                "finish"
+              ],
+              "predicted_observations": [],
+              "permission_level": "read",
+              "failure_recovery": null
+            },
+            "prediction": {
+              "success_probability": 0.9,
+              "expected_goal_progress": 0.9,
+              "expected_information_gain": 0.0,
+              "ambiguity": 0.05,
+              "token_cost": 0.02,
+              "wall_time_cost": 0.01,
+              "operational_risk": 0.0
+            },
+            "eligible": true,
+            "rejection_reasons": [],
+            "score": {
+              "preference_risk": 0.09999999999999998,
+              "failure_risk": 0.024999999999999994,
+              "ambiguity": 0.017499999999999998,
+              "information_gain": -0.0,
+              "token_cost": 0.003,
+              "wall_time_cost": 0.0015,
+              "operational_risk": 0.0,
+              "total": 0.14699999999999996
+            },
+            "score_without_information_gain": {
+              "preference_risk": 0.09999999999999998,
+              "failure_risk": 0.024999999999999994,
+              "ambiguity": 0.017499999999999998,
+              "information_gain": -0.0,
+              "token_cost": 0.003,
+              "wall_time_cost": 0.0015,
+              "operational_risk": 0.0,
+              "total": 0.14699999999999996
+            }
+          },
+          {
+            "action": {
+              "id": "answer_b",
+              "kind": "answer",
+              "arguments": {},
+              "advances": [
+                "finish"
+              ],
+              "predicted_observations": [],
+              "permission_level": "read",
+              "failure_recovery": null
+            },
+            "prediction": {
+              "success_probability": 0.9,
+              "expected_goal_progress": 0.9,
+              "expected_information_gain": 0.0,
+              "ambiguity": 0.05,
+              "token_cost": 0.02,
+              "wall_time_cost": 0.01,
+              "operational_risk": 0.0
+            },
+            "eligible": true,
+            "rejection_reasons": [],
+            "score": {
+              "preference_risk": 0.09999999999999998,
+              "failure_risk": 0.024999999999999994,
+              "ambiguity": 0.017499999999999998,
+              "information_gain": -0.0,
+              "token_cost": 0.003,
+              "wall_time_cost": 0.0015,
+              "operational_risk": 0.0,
+              "total": 0.14699999999999996
+            },
+            "score_without_information_gain": {
+              "preference_risk": 0.09999999999999998,
+              "failure_risk": 0.024999999999999994,
+              "ambiguity": 0.017499999999999998,
+              "information_gain": -0.0,
+              "token_cost": 0.003,
+              "wall_time_cost": 0.0015,
+              "operational_risk": 0.0,
+              "total": 0.14699999999999996
+            }
+          }
+        ],
+        "selected_action_id": "answer_a",
+        "selected_without_information_gain_id": "answer_a",
+        "epistemic_term_changed_selection": false
+      },
+      "state_sha256": "a33a259c4361f00c0e7b571c079c3b2a94b3f163339de379912a63364345cab1",
+      "trace_sha256": "5b78691dd82672f9391d830cf9aebc4d23d65588ba4346384575476c9c0d492e",
+      "selected_action_id": "answer_a",
+      "selected_without_information_gain_id": "answer_a",
+      "exact_selection_passed": true,
+      "ablation_passed": true,
+      "hard_filter_passed": true,
+      "telemetry_passed": true,
+      "epistemic_contribution_passed": true,
+      "passed": true
+    }
+  ],
+  "passed_cases": 6,
+  "required_epistemic_cases": 2,
+  "passed_epistemic_cases": 3,
+  "engineering_gate_passed": true
+}

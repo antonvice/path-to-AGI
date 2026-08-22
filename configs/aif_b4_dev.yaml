@@ -1,0 +1,13 @@
+version: 1
+milestone: B4
+purpose: development
+promotion_eligible: false
+minimum_epistemic_cases: 2
+weights:
+  preference_risk: 1.0
+  failure_risk: 0.25
+  ambiguity: 0.35
+  information_gain: 0.60
+  token_cost: 0.15
+  wall_time_cost: 0.15
+  operational_risk: 2.0

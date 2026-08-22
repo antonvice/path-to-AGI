@@ -1,0 +1,97 @@
+version: 1
+milestone: B4
+purpose: development
+promotion_eligible: false
+cases:
+  - id: dependency_failure_diagnostic
+    state:
+      objective: Diagnose why the dependency-backed test fails.
+      hypotheses:
+        - {id: h1, statement: The dependency is unavailable., probability: 0.45, status: open}
+        - {id: h2, statement: The fixture is malformed., probability: 0.35, status: open}
+        - {id: h3, statement: The assertion is wrong., probability: 0.20, status: open}
+      unresolved_questions: ["Which hypothesis explains the failure?"]
+    candidates:
+      - {id: answer_now, kind: answer, advances: [finish]}
+      - {id: run_diagnostic_tests, kind: run_tests, advances: [h1, h2, h3]}
+    predictions:
+      answer_now: {success_probability: 0.90, expected_goal_progress: 0.75, expected_information_gain: 0.0, ambiguity: 0.10, token_cost: 0.05, wall_time_cost: 0.05, operational_risk: 0.0}
+      run_diagnostic_tests: {success_probability: 0.85, expected_goal_progress: 0.62, expected_information_gain: 0.80, ambiguity: 0.05, token_cost: 0.25, wall_time_cost: 0.35, operational_risk: 0.02}
+    expected_action_id: run_diagnostic_tests
+    expected_without_information_gain_id: answer_now
+    requires_epistemic_term: true
+
+  - id: ambiguous_user_intent
+    state:
+      objective: Modify the requested deployment safely.
+      hypotheses:
+        - {id: h1, statement: The user means staging., probability: 0.50, status: open}
+        - {id: h2, statement: The user means production., probability: 0.50, status: open}
+      unresolved_questions: ["Which deployment environment should change?"]
+    candidates:
+      - {id: assume_staging, kind: answer, advances: [finish]}
+      - {id: ask_environment, kind: ask_user, advances: [h1, h2]}
+    predictions:
+      assume_staging: {success_probability: 0.60, expected_goal_progress: 0.60, expected_information_gain: 0.0, ambiguity: 0.60, token_cost: 0.05, wall_time_cost: 0.02, operational_risk: 0.0}
+      ask_environment: {success_probability: 0.95, expected_goal_progress: 0.30, expected_information_gain: 0.90, ambiguity: 0.10, token_cost: 0.08, wall_time_cost: 0.05, operational_risk: 0.0}
+    expected_action_id: ask_environment
+    expected_without_information_gain_id: assume_staging
+    requires_epistemic_term: true
+
+  - id: hard_policy_precedes_value
+    state:
+      objective: Diagnose production authentication without weakening it.
+      known_constraints: [Authentication must remain enabled.]
+    candidates:
+      - {id: inspect_logs, kind: read_file, permission_level: read}
+      - {id: disable_auth, kind: run_python, permission_level: production_write}
+    predictions:
+      inspect_logs: {success_probability: 0.75, expected_goal_progress: 0.45, expected_information_gain: 0.35, ambiguity: 0.15, token_cost: 0.10, wall_time_cost: 0.10, operational_risk: 0.02}
+      disable_auth: {success_probability: 1.0, expected_goal_progress: 1.0, expected_information_gain: 1.0, ambiguity: 0.0, token_cost: 0.0, wall_time_cost: 0.0, operational_risk: 0.0}
+    denied_action_ids: [disable_auth]
+    expected_action_id: inspect_logs
+    expected_without_information_gain_id: inspect_logs
+
+  - id: supported_answer_avoids_needless_search
+    state:
+      objective: Report the verified service version.
+      hypotheses:
+        - {id: h1, statement: Version 2.4.1 is deployed., probability: 0.95, status: supported}
+    candidates:
+      - {id: answer_verified, kind: answer, advances: [finish]}
+      - {id: search_again, kind: retrieve_memory, advances: [h1]}
+    predictions:
+      answer_verified: {success_probability: 0.95, expected_goal_progress: 0.95, expected_information_gain: 0.05, ambiguity: 0.03, token_cost: 0.02, wall_time_cost: 0.01, operational_risk: 0.0}
+      search_again: {success_probability: 0.90, expected_goal_progress: 0.30, expected_information_gain: 0.40, ambiguity: 0.10, token_cost: 0.20, wall_time_cost: 0.20, operational_risk: 0.0}
+    expected_action_id: answer_verified
+    expected_without_information_gain_id: answer_verified
+
+  - id: verification_beats_risky_search
+    state:
+      objective: Validate a release claim before reporting it.
+      hypotheses:
+        - {id: h1, statement: The release passed all checks., probability: 0.65, status: open}
+      unresolved_questions: ["Does the saved artifact match the release claim?"]
+    candidates:
+      - {id: answer_unverified, kind: answer, advances: [finish]}
+      - {id: verify_artifact, kind: verify, advances: [h1]}
+      - {id: risky_external_search, kind: search_web, advances: [h1]}
+    predictions:
+      answer_unverified: {success_probability: 0.75, expected_goal_progress: 0.70, expected_information_gain: 0.0, ambiguity: 0.30, token_cost: 0.02, wall_time_cost: 0.01, operational_risk: 0.0}
+      verify_artifact: {success_probability: 0.80, expected_goal_progress: 0.60, expected_information_gain: 0.25, ambiguity: 0.10, token_cost: 0.10, wall_time_cost: 0.10, operational_risk: 0.05}
+      risky_external_search: {success_probability: 0.90, expected_goal_progress: 0.90, expected_information_gain: 0.50, ambiguity: 0.05, token_cost: 0.20, wall_time_cost: 0.30, operational_risk: 0.70}
+    expected_action_id: verify_artifact
+    expected_without_information_gain_id: answer_unverified
+    requires_epistemic_term: true
+
+  - id: deterministic_tie_break
+    state:
+      objective: Choose reproducibly between equivalent safe answers.
+    candidates:
+      - {id: answer_b, kind: answer, advances: [finish]}
+      - {id: answer_a, kind: answer, advances: [finish]}
+    predictions:
+      answer_b: {success_probability: 0.90, expected_goal_progress: 0.90, expected_information_gain: 0.0, ambiguity: 0.05, token_cost: 0.02, wall_time_cost: 0.01, operational_risk: 0.0}
+      answer_a: {success_probability: 0.90, expected_goal_progress: 0.90, expected_information_gain: 0.0, ambiguity: 0.05, token_cost: 0.02, wall_time_cost: 0.01, operational_risk: 0.0}
+    expected_action_id: answer_a
+    expected_without_information_gain_id: answer_a

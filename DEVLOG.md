@@ -446,6 +446,31 @@ answer selection and compare that behavior against B2 before any B3 held-out fre
 B3 is promoted only for this frozen evidence-sensitive decision claim. It does not validate natural
 language claim extraction or general intelligence. Next: B4 active-inference action selection.
 
+## 2026-08-22 — B4a active-inference action-selection development gate
+
+- Added a B4 selector that consumes explicit belief state, typed action candidates, predicted
+  outcomes, hard policy rules, and the optional logic backend.
+- Hard constraints are evaluated for all candidates before any eligible action is scored. Rejected
+  actions retain named rule reasons and have no score.
+- Added separately logged preference risk, failure risk, ambiguity, information gain, token cost,
+  wall-time cost, and operational-risk terms. Lower total score wins; action ID breaks exact ties.
+- Added deterministic state and selection-trace hashing plus a per-decision counterfactual that sets
+  only the information-gain weight to zero.
+- Added a six-case suite marked `purpose: development` and `promotion_eligible: false`. It covers
+  diagnostic testing, clarification, hard-policy precedence, stopping needless retrieval,
+  verification versus risk, and input-order-independent ties.
+- The suite passed 6/6. Three cases select the correct epistemic action while the no-information-gain
+  ablation chooses the immediate answer. The hard-policy trap rejects an otherwise numerically ideal
+  unsafe action before scoring.
+- Saved and offline-regraded report `a8178a9a-d9e7-40fa-8e87-7e8729f0a20c`, bound to fixture hash
+  `574bf337...` and score-config hash `3951c0da...`.
+- Full verification passed: Ruff, format, strict mypy, 134 tests, B2 promotion regrade, B3 development
+  and behavior regrades, and the three-process B3 promotion regrade.
+
+This is the B4 implementation checkpoint, not promotion. Next: design and freeze an unseen B4
+held-out suite before model inference, then run paired B3/B4 independent-process comparisons without
+changing the development weights or hidden cases.
+
 ## Commit history
 
 | Commit | Milestone |
@@ -467,6 +492,10 @@ language claim extraction or general intelligence. Next: B4 active-inference act
 | `7fb7654` | Failed B2 held-out promotion evidence |
 | `747dd37` | Separate schema-v2 B2 development remediation |
 | `95ea832` | Frozen unseen post-remediation B2 held-out suite |
+| `d332737` | Passing post-remediation B2 held-out promotion |
+| `1a14a33` | B3 explicit belief-state core |
+| `11b68cb` | B3 deterministic development evaluator |
+| `b56a3b6` | B3 held-out promotion evidence |
 
 ## Reproduce the current checks
 
@@ -485,6 +514,8 @@ uv --cache-dir .uv-cache run aif-qwen-agent regrade-b3-dev \
   --report evals/development/b3_dev/report.json
 uv --cache-dir .uv-cache run aif-qwen-agent regrade-b3 \
   --report evals/baselines/b3h_explicit_belief/report.json
+uv --cache-dir .uv-cache run python scripts/eval_b4_dev.py regrade \
+  --report evals/development/b4_dev/report.json
 ```
 
 The offline regrade does not require or call the model.

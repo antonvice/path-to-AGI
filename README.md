@@ -34,9 +34,10 @@ addition under pinned model/configuration budgets, persists replayable traces, r
 and withholds promotion if any quality, safety, reproducibility, or cost gate fails. B1d and B1e are
 deliberate examples of successful behavior that was not promoted because cost remained too high.
 
-The current promoted result is B1g: a read-only, one-step evidence agent on a small hand-authored
-held-out suite. B2 episodic retrieval has now been evaluated but was not promoted: it improved
-cross-session recall and preserved safety, while failing exact retrieval and token-cost gates.
+The current promoted result is B3: explicit beliefs improve a narrow frozen suite over a stateless
+latest-observation baseline. B2 episodic retrieval was promoted only after a separate development
+remediation and new unseen held-out suite; its original failed held-out evidence remains unchanged.
+B4 action selection now has passing development evidence but is not yet promotion eligible.
 
 ## Status
 
@@ -97,6 +98,11 @@ Working now:
   and retains provenance instead of blindly trusting the latest observation.
 - Passing three-process frozen B3 held-out promotion with a +42.9-point quality delta over the
   stateless latest-observation ablation and exact state, safety, and reproducibility gates.
+- B4 belief-aware active-inference selection with hard filtering before scoring, seven separately
+  logged preference/failure/ambiguity/information/cost/risk terms, deterministic tie-breaking, and
+  content-hashed decision traces.
+- Separate six-case, non-promotion B4 development suite with 6/6 exact decisions and three cases
+  where removing information gain changes the correct action; offline replay regrades exactly.
 - Typed schemas for beliefs, actions, predicted outcomes, truth bounds, and logical facts.
 - Transparent MVP active-inference score with separately logged terms.
 - Hard policy and logical filtering before action scoring.
@@ -328,6 +334,17 @@ uv run aif-qwen-agent regrade-b3 \
   --report evals/baselines/b3h_explicit_belief/report.json
 ```
 
+Run or offline-regrade the model-free B4 development gate:
+
+```bash
+uv run python scripts/eval_b4_dev.py evaluate --report artifacts/b4-dev/report.json
+uv run python scripts/eval_b4_dev.py regrade \
+  --report evals/development/b4_dev/report.json
+```
+
+The evaluator refuses to overwrite an existing report. This suite is explicitly development-only;
+it cannot promote B4.
+
 ## Repository map
 
 | Path | Purpose |
@@ -342,6 +359,7 @@ uv run aif-qwen-agent regrade-b3 \
 | `configs/memory.yaml` | B2 SQLite path, schema version, retrieval backend, and default limit |
 | `configs/memory_b2_dev.yaml` | Non-promotion schema-v2 retrieval/context development settings |
 | `configs/memory_b2h.yaml` | Promotion-eligible schema-v2 held-out retrieval/context settings |
+| `configs/aif_b4_dev.yaml` | Frozen-for-report B4 score weights and epistemic development gate |
 | `src/aif_qwen_agent/schemas.py` | Typed beliefs, actions, predictions, and logical facts |
 | `src/aif_qwen_agent/memory.py` | Content-addressed verified episodes and SQLite FTS5 retrieval |
 | `src/aif_qwen_agent/belief.py` | Deterministic belief updates, B2 projection, and durable revisions |
@@ -351,6 +369,8 @@ uv run aif-qwen-agent regrade-b3 \
 | `src/aif_qwen_agent/b3_evaluation.py` | Non-promotion B3 state evaluator and offline regrade |
 | `src/aif_qwen_agent/belief_decision.py` | Belief-aware decision policy and stateless ablation |
 | `src/aif_qwen_agent/b3_behavior.py` | B3 behavior comparison, freeze, and independent promotion gate |
+| `src/aif_qwen_agent/aif_selection.py` | Hard-filtered B4 score decomposition and deterministic trace |
+| `src/aif_qwen_agent/b4_evaluation.py` | Non-promotion B4 evaluator, report, and offline replay |
 | `src/aif_qwen_agent/agent.py` | Bounded one-step proposal, tool, answer, and trace lifecycle |
 | `src/aif_qwen_agent/b1_evaluation.py` | Shared-model B0/B1 quality, safety, and regrade pipeline |
 | `src/aif_qwen_agent/b1_reproducibility.py` | Repeated agreement, latency, memory, and cost gates |
@@ -368,6 +388,8 @@ uv run aif-qwen-agent regrade-b3 \
 | `evals/development/b3_dev/` | Hash-bound B3 development report and belief revision database |
 | `evals/tasks/b3h/` | Frozen unseen B3 behavioral held-out suite and source manifest |
 | `evals/baselines/b3h_explicit_belief/` | Three-process B3 promotion evidence |
+| `evals/tasks/b4_dev/` | B4 action-choice, policy, risk, tie, and ablation development cases |
+| `evals/development/b4_dev/` | Hash-bound passing B4 development report |
 | `tests/` | Unit, integration, behavioral, safety, and regression checks |
 | `scripts/` | Model smoke test and future evaluation/promotion entry points |
 
@@ -800,6 +822,24 @@ narrow frozen-suite claim that persistent confidence, refutation, contradiction,
 handling improve deterministic evidence-sensitive decisions over a latest-observation baseline. No
 model was called, and this does not establish calibrated natural-language extraction, broad reasoning,
 or AGI. The next milestone is B4 active-inference action selection.
+
+## B4a active-inference action selection
+
+B4 converts explicit beliefs and predicted outcomes into a transparent next-action decision. It
+first evaluates every hard policy and logic rule. Rejected actions retain named reasons and receive
+no score. Eligible actions are ranked by weighted preference risk, failure risk, ambiguity,
+information gain, token cost, wall-time cost, and operational risk; ties resolve by action ID.
+
+Every trace also repeats the decision with the information-gain weight set to zero. This nearest
+ablation shows whether an epistemic term actually changed the action instead of awarding credit for
+extra tool use.
+
+The separate six-case development suite passed 6/6, including three correct choices that reverse
+under the no-information-gain ablation and one forbidden action whose attractive prediction is never
+scored. Report `a8178a9a-d9e7-40fa-8e87-7e8729f0a20c` embeds every term-level trace and was regraded
+by deterministic replay. This is model-free engineering evidence, not B4 promotion evidence. Next:
+design and freeze a new unseen B4 held-out suite before any model inference, then compare B4 with B3
+across independent processes under the preset quality, safety, and cost gates.
 
 ## Milestones
 

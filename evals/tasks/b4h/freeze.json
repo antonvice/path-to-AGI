@@ -1,0 +1,36 @@
+{
+  "development_suite_sha256": "574bf337623f29e305cf9587dc7376f213b3ae5abc34d1c3e97d73aa96631401",
+  "files": {
+    "configs/aif_b4_heldout.yaml": "166993ad0584a952a58ec444f24ccbd889c717a91b84182d614b31cad6699352",
+    "configs/qwen3_8_27b_b4.yaml": "c2c65c2314e2d35e2cd0f3b10d340a3edc8decd40a0575c9a18545d1dc73d948",
+    "evals/tasks/b4_dev/suite.yaml": "574bf337623f29e305cf9587dc7376f213b3ae5abc34d1c3e97d73aa96631401",
+    "evals/tasks/b4h/PROTOCOL.md": "d12c6bef90d255df67d702ac1cbdb0f873ae268859ae94c0bcefd5a542a1cb0a",
+    "evals/tasks/b4h/suite.yaml": "66a3bebdac69bee718571ec40c1dd8b9f960c378238218b3a2074b35e9d30840",
+    "pyproject.toml": "9f84f5ed3337df89c0277eeaed5a9e7f48f0c2165b15b63dd2b1a2ee4149593e",
+    "scripts/run_b4_heldout.py": "9f8181e46248ef26f40043031956e7c18e3b4a3bce5413f9ac166613aeef33df",
+    "src/aif_qwen_agent/aif_selection.py": "72cd5d8ac895b019cd169fb7fbcf3116ad2ebb71fe4747a69a316b3c87e9c2a0",
+    "src/aif_qwen_agent/artifacts.py": "09330da5f529555211cb14ce6a9fe73387c395e0c08af60a596d032e58689344",
+    "src/aif_qwen_agent/b4_heldout.py": "b869c2b3ee53b9f636a82a54dc5a76da50db192f9a475039b3a36657a813e1d1",
+    "src/aif_qwen_agent/belief.py": "41d24dd20baa5bd45613e9bf45fa402225167a835f32c9ba4a3b50ce7cbd9a57",
+    "src/aif_qwen_agent/config.py": "dd4edc2a18e4a84c896c30c4695b18f55ae7bf6dea4e8f2c52fdab8694f92624",
+    "src/aif_qwen_agent/model_adapters/base.py": "e075963e2e852e4a575c6e0afd7516438ae0193a9171b0d462fade71866cfe7a",
+    "src/aif_qwen_agent/model_adapters/ollama.py": "d27fb60c68a81eead4d5f4c6b8bc529cd30bfbb698958492831636b77e034729",
+    "src/aif_qwen_agent/policy.py": "c3ddda88945d78bc52b517b04f4b3c60694378acfbe6b5218cd3bd2b020b2c13",
+    "src/aif_qwen_agent/schemas.py": "468dcb5f89fc3faedd9d2c9851e34b4b8300851826db0102ac768614ca391df4",
+    "uv.lock": "d9a2c7800c7f560dd6dd310f368f96e199ace785cf7b397600c75b961ab7f16d"
+  },
+  "frozen_at": "2026-08-24T22:29:07.314777+00:00",
+  "inference_status_at_freeze": "not_started",
+  "milestone": "B4",
+  "model": "orcarouter/Qwen3.8-27B-Uncensored:iq4_xs",
+  "model_digest": "84e6355d6764e264ccdfe486243821e7000eaff08827557af4e3dc537c772c2a",
+  "novelty_overlap": {
+    "action_ids": [],
+    "case_ids": [],
+    "hypothesis_statements": [],
+    "objectives": []
+  },
+  "promotion_eligible": true,
+  "purpose": "held_out",
+  "schema_version": "1"
+}

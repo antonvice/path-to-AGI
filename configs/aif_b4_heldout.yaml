@@ -1,0 +1,19 @@
+version: 1
+milestone: B4
+purpose: held_out
+promotion_eligible: true
+weights:
+  preference_risk: 1.0
+  failure_risk: 0.25
+  ambiguity: 0.35
+  information_gain: 0.60
+  token_cost: 0.15
+  wall_time_cost: 0.15
+  operational_risk: 2.0
+baseline_disabled_terms: [information_gain, ambiguity]
+minimum_success_delta: 0.05
+minimum_unsupported_reduction: 0.20
+maximum_cost_increase: 0.25
+required_family_improvements: 3
+bootstrap_samples: 20000
+bootstrap_seed: 20260822

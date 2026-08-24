@@ -37,7 +37,8 @@ deliberate examples of successful behavior that was not promoted because cost re
 The current promoted result is B3: explicit beliefs improve a narrow frozen suite over a stateless
 latest-observation baseline. B2 episodic retrieval was promoted only after a separate development
 remediation and new unseen held-out suite; its original failed held-out evidence remains unchanged.
-B4 action selection now has passing development evidence but is not yet promotion eligible.
+B4 action selection has passing development evidence, but its first unseen held-out promotion gate
+failed with no improvement over the matched B3 myopic ablation. That failed evidence is preserved.
 
 ## Status
 
@@ -103,6 +104,10 @@ Working now:
   content-hashed decision traces.
 - Separate six-case, non-promotion B4 development suite with 6/6 exact decisions and three cases
   where removing information gain changes the correct action; offline replay regrades exactly.
+- Frozen unseen 15-case B4 held-out suite with a pre-inference Git commit and zero-overlap receipt;
+  three cold independent model processes reproduced exactly, but B3 and B4 tied 13/15 and promotion
+  failed. The next remediation target is world-model prediction calibration, not selector tuning on
+  the frozen suite.
 - Typed schemas for beliefs, actions, predicted outcomes, truth bounds, and logical facts.
 - Transparent MVP active-inference score with separately logged terms.
 - Hard policy and logical filtering before action scoring.
@@ -345,6 +350,13 @@ uv run python scripts/eval_b4_dev.py regrade \
 The evaluator refuses to overwrite an existing report. This suite is explicitly development-only;
 it cannot promote B4.
 
+Offline-regrade the frozen three-process B4 held-out result:
+
+```bash
+uv run python scripts/run_b4_heldout.py regrade \
+  --report evals/baselines/b4h_qwen3_8_27b_ollama/report.json
+```
+
 ## Repository map
 
 | Path | Purpose |
@@ -360,6 +372,8 @@ it cannot promote B4.
 | `configs/memory_b2_dev.yaml` | Non-promotion schema-v2 retrieval/context development settings |
 | `configs/memory_b2h.yaml` | Promotion-eligible schema-v2 held-out retrieval/context settings |
 | `configs/aif_b4_dev.yaml` | Frozen-for-report B4 score weights and epistemic development gate |
+| `configs/aif_b4_heldout.yaml` | Frozen B4 paired-ablation weights and promotion thresholds |
+| `configs/qwen3_8_27b_b4.yaml` | Digest-pinned Ollama world-model generation settings for B4 |
 | `src/aif_qwen_agent/schemas.py` | Typed beliefs, actions, predictions, and logical facts |
 | `src/aif_qwen_agent/memory.py` | Content-addressed verified episodes and SQLite FTS5 retrieval |
 | `src/aif_qwen_agent/belief.py` | Deterministic belief updates, B2 projection, and durable revisions |
@@ -371,6 +385,7 @@ it cannot promote B4.
 | `src/aif_qwen_agent/b3_behavior.py` | B3 behavior comparison, freeze, and independent promotion gate |
 | `src/aif_qwen_agent/aif_selection.py` | Hard-filtered B4 score decomposition and deterministic trace |
 | `src/aif_qwen_agent/b4_evaluation.py` | Non-promotion B4 evaluator, report, and offline replay |
+| `src/aif_qwen_agent/b4_heldout.py` | Frozen paired B3/B4 process runner, aggregation, and regrade |
 | `src/aif_qwen_agent/agent.py` | Bounded one-step proposal, tool, answer, and trace lifecycle |
 | `src/aif_qwen_agent/b1_evaluation.py` | Shared-model B0/B1 quality, safety, and regrade pipeline |
 | `src/aif_qwen_agent/b1_reproducibility.py` | Repeated agreement, latency, memory, and cost gates |
@@ -390,6 +405,8 @@ it cannot promote B4.
 | `evals/baselines/b3h_explicit_belief/` | Three-process B3 promotion evidence |
 | `evals/tasks/b4_dev/` | B4 action-choice, policy, risk, tie, and ablation development cases |
 | `evals/development/b4_dev/` | Hash-bound passing B4 development report |
+| `evals/tasks/b4h/` | Frozen unseen B4 suite, protocol, and pre-inference manifest |
+| `evals/baselines/b4h_qwen3_8_27b_ollama/` | Failed three-process B4 evidence retained unchanged |
 | `tests/` | Unit, integration, behavioral, safety, and regression checks |
 | `scripts/` | Model smoke test and future evaluation/promotion entry points |
 
@@ -840,6 +857,24 @@ scored. Report `a8178a9a-d9e7-40fa-8e87-7e8729f0a20c` embeds every term-level tr
 by deterministic replay. This is model-free engineering evidence, not B4 promotion evidence. Next:
 design and freeze a new unseen B4 held-out suite before any model inference, then compare B4 with B3
 across independent processes under the preset quality, safety, and cost gates.
+
+## B4b unseen held-out result
+
+The 15-case suite was committed as `b7911b3` before inference and bound to manifest
+`2ad870b3f490ac97505ac357dd7dea4d0e755238f422ed9e6ef500b74fdc5f76`. The manifest records no
+overlap with B4 development case IDs, objectives, action IDs, or hypothesis statements.
+
+Three cold model processes (`33832`, `34559`, `34994`) produced exact prediction/action/token/grade
+agreement and no parse or safety failures. Both the B3 myopic ablation and B4 passed 39/45 runs
+(13/15 per process), so the quality delta and paired confidence interval were both exactly zero.
+No task family improved, and the promotion gate failed. Aggregate report
+`2046d19e-71ef-4767-81e0-ae3201514498` regrades entirely offline.
+
+The two shared errors point to the compact world-model predictor: it assigned maximum operational
+risk to a bounded read-only diagnostic test and material risk to an answer supported at 0.96,
+causing one insufficient search and one unnecessary retrieval. This does not validate B4, and the
+frozen suite must not be tuned or replaced. Next: build a separate development-only calibration
+suite for predicted outcome semantics before freezing any new unseen B4 evaluation.
 
 ## Milestones
 

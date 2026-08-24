@@ -471,6 +471,35 @@ This is the B4 implementation checkpoint, not promotion. Next: design and freeze
 held-out suite before model inference, then run paired B3/B4 independent-process comparisons without
 changing the development weights or hidden cases.
 
+## 2026-08-24 — Frozen B4 held-out evaluation failed promotion
+
+- Designed 15 unseen cases across fault isolation, intent disambiguation, claim verification,
+  memory resolution, and completion control: 12 uncertainty-sensitive decisions plus three controls.
+- Added a paired protocol using one saved world-model prediction per case. The B3-compatible myopic
+  arm disables information gain and ambiguity; B4 restores both while sharing all other predictions,
+  hard filters, weights, and model cost.
+- Froze 17 suite/config/runtime files before inference. Manifest
+  `2ad870b3f490ac97505ac357dd7dea4d0e755238f422ed9e6ef500b74fdc5f76` records the model digest,
+  `not_started` inference status, development-suite hash, and zero overlap in case IDs, objectives,
+  action IDs, and hypothesis statements. Commit `b7911b3` was pushed before model access.
+- Ran three cold independent Ollama harness processes: PIDs `33832`, `34559`, and `34994`. First-call
+  cold loads were 24.37, 13.05, and 13.54 seconds. All 45 compact predictions parsed.
+- B3 and B4 both passed 39/45 runs (13/15 per process); delta 0.0 points and paired 95% interval
+  [0.0, 0.0]. Unsupported immediate answers were 0 vs 0, safety violations 0 vs 0, and no family
+  improved. Quality, confidence, unsupported-claim, and family gates failed; promotion failed.
+- Raw prediction codes, actions, token counts, grades, and failures reproduced exactly. Shared model
+  usage was 15,300 input and 1,470 output tokens with 806.37 seconds generation. Marginal selector
+  model cost was zero by the shared-prediction design.
+- Offline regrade verified aggregate report `2046d19e-71ef-4767-81e0-ae3201514498` and every child
+  artifact. B2 and B3 historical evidence remains untouched.
+- Failure analysis: the compact predictor assigned maximum operational risk to a bounded read-only
+  diagnostic test and material risk to an already-supported answer. Both selectors therefore made
+  the same two errors.
+
+This is permanent failed held-out evidence, not permission to tune the suite. Next: create a separate
+development-only world-model calibration suite, then freeze new unseen cases only after predictor
+semantics pass independently.
+
 ## Commit history
 
 | Commit | Milestone |
@@ -496,6 +525,8 @@ changing the development weights or hidden cases.
 | `1a14a33` | B3 explicit belief-state core |
 | `11b68cb` | B3 deterministic development evaluator |
 | `b56a3b6` | B3 held-out promotion evidence |
+| `a34e284` | B4 active-inference selection development gate |
+| `b7911b3` | Pre-inference freeze of unseen B4 held-out suite |
 
 ## Reproduce the current checks
 
@@ -516,6 +547,8 @@ uv --cache-dir .uv-cache run aif-qwen-agent regrade-b3 \
   --report evals/baselines/b3h_explicit_belief/report.json
 uv --cache-dir .uv-cache run python scripts/eval_b4_dev.py regrade \
   --report evals/development/b4_dev/report.json
+uv --cache-dir .uv-cache run python scripts/run_b4_heldout.py regrade \
+  --report evals/baselines/b4h_qwen3_8_27b_ollama/report.json
 ```
 
 The offline regrade does not require or call the model.

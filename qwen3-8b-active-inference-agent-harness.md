@@ -1,6 +1,6 @@
 # Qwen3-8B Active-Inference Agent Harness
 
-Status: B4 AIF selection development gate passed 2026-08-22; unseen held-out freeze is next
+Status: B4 unseen held-out gate failed 2026-08-24 with a 13/15 tie; predictor calibration is next
 Audience: AI engineer, Python engineer, evaluation engineer
 Purpose: build and measure a general-purpose, continually improving agent harness without claiming that the initial system is AGI
 
@@ -536,6 +536,12 @@ B4 development checkpoint (2026-08-22): the hard-filtered seven-term selector an
 no-information-gain ablation passed a separate six-case deterministic suite. This evidence is
 explicitly not promotion eligible. The next action is to design and freeze a new unseen B4 held-out
 suite before model inference, preserving the thresholds above.
+
+B4 held-out result (2026-08-24): a 15-case unseen suite was committed and frozen before inference,
+then run in three cold independent model processes. B3 myopic and B4 both passed 39/45 runs, the
+paired interval was exactly zero, and no family improved. Reproducibility, safety, cold-process, and
+marginal shared-prediction cost gates passed; promotion failed. The frozen result must remain
+unchanged. A separate development-only outcome-predictor calibration stage is next.
 
 ## 9. Automated improvement loop
 

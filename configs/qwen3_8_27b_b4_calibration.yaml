@@ -1,0 +1,13 @@
+model:
+  repo_id: orcarouter/Qwen3.8-27B-Uncensored:iq4_xs
+  revision: 84e6355d6764e264ccdfe486243821e7000eaff08827557af4e3dc537c772c2a
+inference:
+  backend: ollama
+  endpoint: http://127.0.0.1:11434
+  max_context_tokens: 32768
+  max_new_tokens: 384
+  temperature: 0.0
+  seed: 42
+  enable_thinking: false
+ollama:
+  keep_alive: 5m

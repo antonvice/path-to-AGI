@@ -106,8 +106,11 @@ Working now:
   where removing information gain changes the correct action; offline replay regrades exactly.
 - Frozen unseen 15-case B4 held-out suite with a pre-inference Git commit and zero-overlap receipt;
   three cold independent model processes reproduced exactly, but B3 and B4 tied 13/15 and promotion
-  failed. The next remediation target is world-model prediction calibration, not selector tuning on
-  the frozen suite.
+  failed. Its immutable evidence remains a permanent failed result rather than tuning data.
+- Separate eight-case B4 world-model calibration suite with zero overlap against both prior B4
+  suites, named percentage predictions, 40 explicit range/order invariants, downstream B3/B4
+  traces, safety/completion gates, raw model evidence, and model-free offline regrading. The first
+  digest-pinned development run passed every gate; it is not promotion evidence.
 - Typed schemas for beliefs, actions, predicted outcomes, truth bounds, and logical facts.
 - Transparent MVP active-inference score with separately logged terms.
 - Hard policy and logical filtering before action scoring.
@@ -121,7 +124,7 @@ Not implemented yet:
 - Sandboxed Python and test execution tools.
 - Unified SQLite storage for runs, artifacts, evaluations, and later semantic/procedural memory.
 - Calibrated claim extraction and semantic memory.
-- Calibrated world-model prediction.
+- A compact calibrated world-model representation proven on a new unseen held-out suite.
 
 ## Architecture
 
@@ -357,6 +360,17 @@ uv run python scripts/run_b4_heldout.py regrade \
   --report evals/baselines/b4h_qwen3_8_27b_ollama/report.json
 ```
 
+Run or offline-regrade the separate B4 world-model calibration suite:
+
+```bash
+uv run python scripts/eval_b4_calibration.py evaluate
+uv run python scripts/eval_b4_calibration.py regrade
+```
+
+This path is explicitly `promotion_eligible: false`. It never reads expected ranges or actions into
+the model prompt, refuses to overwrite saved evidence, and leaves the failed B4 held-out suite
+byte-identical.
+
 ## Repository map
 
 | Path | Purpose |
@@ -374,6 +388,8 @@ uv run python scripts/run_b4_heldout.py regrade \
 | `configs/aif_b4_dev.yaml` | Frozen-for-report B4 score weights and epistemic development gate |
 | `configs/aif_b4_heldout.yaml` | Frozen B4 paired-ablation weights and promotion thresholds |
 | `configs/qwen3_8_27b_b4.yaml` | Digest-pinned Ollama world-model generation settings for B4 |
+| `configs/aif_b4_calibration.yaml` | Non-promotion semantic and downstream calibration gates |
+| `configs/qwen3_8_27b_b4_calibration.yaml` | Named-output Ollama calibration generation settings |
 | `src/aif_qwen_agent/schemas.py` | Typed beliefs, actions, predictions, and logical facts |
 | `src/aif_qwen_agent/memory.py` | Content-addressed verified episodes and SQLite FTS5 retrieval |
 | `src/aif_qwen_agent/belief.py` | Deterministic belief updates, B2 projection, and durable revisions |
@@ -386,6 +402,7 @@ uv run python scripts/run_b4_heldout.py regrade \
 | `src/aif_qwen_agent/aif_selection.py` | Hard-filtered B4 score decomposition and deterministic trace |
 | `src/aif_qwen_agent/b4_evaluation.py` | Non-promotion B4 evaluator, report, and offline replay |
 | `src/aif_qwen_agent/b4_heldout.py` | Frozen paired B3/B4 process runner, aggregation, and regrade |
+| `src/aif_qwen_agent/b4_calibration.py` | Named predictions, semantic invariants, traces, and replay |
 | `src/aif_qwen_agent/agent.py` | Bounded one-step proposal, tool, answer, and trace lifecycle |
 | `src/aif_qwen_agent/b1_evaluation.py` | Shared-model B0/B1 quality, safety, and regrade pipeline |
 | `src/aif_qwen_agent/b1_reproducibility.py` | Repeated agreement, latency, memory, and cost gates |
@@ -407,6 +424,8 @@ uv run python scripts/run_b4_heldout.py regrade \
 | `evals/development/b4_dev/` | Hash-bound passing B4 development report |
 | `evals/tasks/b4h/` | Frozen unseen B4 suite, protocol, and pre-inference manifest |
 | `evals/baselines/b4h_qwen3_8_27b_ollama/` | Failed three-process B4 evidence retained unchanged |
+| `evals/tasks/b4_calibration_dev/` | Separate world-model semantic calibration cases |
+| `evals/development/b4_calibration/` | Raw digest-pinned calibration evidence and report |
 | `tests/` | Unit, integration, behavioral, safety, and regression checks |
 | `scripts/` | Model smoke test and future evaluation/promotion entry points |
 
@@ -875,6 +894,25 @@ risk to a bounded read-only diagnostic test and material risk to an answer suppo
 causing one insufficient search and one unnecessary retrieval. This does not validate B4, and the
 frozen suite must not be tuned or replaced. Next: build a separate development-only calibration
 suite for predicted outcome semantics before freezing any new unseen B4 evaluation.
+
+## B4c world-model calibration development result
+
+The separate calibration suite replaces the opaque seven-digit development encoding with seven
+named integer-percentage fields. Expected ranges and orderings remain grader-only: the prompt sees
+the belief state and candidate metadata, but not the expected action or invariant thresholds. The
+loader enforces zero overlap in IDs, objectives, action IDs, and hypothesis statements against both
+the original B4 development suite and failed B4 held-out suite.
+
+The real digest-pinned Ollama run parsed 8/8 outputs and passed all 40 semantic checks, all eight
+downstream B3 and B4 choices, all safety checks, and both supported-belief completion controls.
+Report `00a6a318-e504-4251-af8e-5b795129fd48` regrades entirely from saved raw outputs. It recorded
+3,409 input tokens, 922 output tokens, 61.60 seconds of model load time, and 614.72 seconds of
+generation. Every response ended normally rather than at the 384-token ceiling.
+
+This is a development calibration pass, not evidence that B4 beats B3: both arms scored 8/8 and the
+delta is zero. It also exposes a cost tradeoff—the named schema is much more legible but verbose.
+Next: design a compact named representation on development data, preserve this report, then freeze
+a completely new unseen suite before any further promotion-eligible model inference.
 
 ## Milestones
 

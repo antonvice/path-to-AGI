@@ -1,0 +1,15 @@
+version: 1
+milestone: B4
+purpose: development_calibration
+promotion_eligible: false
+minimum_semantic_check_rate: 0.85
+minimum_b4_action_rate: 0.75
+minimum_b4_delta: 0.0
+weights:
+  preference_risk: 1.0
+  failure_risk: 0.25
+  ambiguity: 0.35
+  information_gain: 0.60
+  token_cost: 0.15
+  wall_time_cost: 0.15
+  operational_risk: 2.0

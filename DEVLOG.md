@@ -500,6 +500,32 @@ This is permanent failed held-out evidence, not permission to tune the suite. Ne
 development-only world-model calibration suite, then freeze new unseen cases only after predictor
 semantics pass independently.
 
+## 2026-09-02 — B4 world-model calibration development pass
+
+- Added a separate eight-case suite marked `purpose: development_calibration` and
+  `promotion_eligible: false`; it has zero overlap in case IDs, objectives, action IDs, or hypothesis
+  statements with the earlier B4 development suite and failed B4 held-out suite.
+- Replaced the brittle seven-digit development output with seven named integer-percentage fields:
+  success, goal progress, information gain, remaining ambiguity, token cost, wall-time cost, and
+  operational risk.
+- Kept expected actions and 40 semantic range/order invariants out of the model prompt. The grader
+  checks read-only versus destructive risk, supported-answer completion, uncertainty reduction,
+  information ordering, and targeted-versus-broad cost.
+- Added strict schema parsing, hard-policy filtering, matched B3/B4 downstream traces, safety and
+  completion gates, raw output/token/timing retention, hash-bound inputs, overwrite refusal, and
+  full model-free offline reconstruction.
+- The digest-pinned real run passed schema 8/8, semantic checks 40/40, B3 choices 8/8, B4 choices
+  8/8, safety 8/8, and completion controls 2/2. Report
+  `00a6a318-e504-4251-af8e-5b795129fd48` regrades offline.
+- The run used 3,409 input and 922 output tokens, 61.60 seconds of model load time, and 614.72
+  seconds of generation. All eight responses reached EOS.
+- Reverified all 17 files in the old B4h freeze after implementation; the permanent failed suite
+  and evidence remain byte-identical.
+
+This is development evidence only. B3 and B4 both passed 8/8 here, so it provides no selector
+improvement claim. Next: reduce named-output verbosity on development data, then design and freeze a
+completely new unseen B4 suite before any promotion-eligible inference.
+
 ## Commit history
 
 | Commit | Milestone |
@@ -549,6 +575,8 @@ uv --cache-dir .uv-cache run python scripts/eval_b4_dev.py regrade \
   --report evals/development/b4_dev/report.json
 uv --cache-dir .uv-cache run python scripts/run_b4_heldout.py regrade \
   --report evals/baselines/b4h_qwen3_8_27b_ollama/report.json
+uv --cache-dir .uv-cache run python scripts/eval_b4_calibration.py regrade \
+  --report evals/development/b4_calibration/report.json
 ```
 
 The offline regrade does not require or call the model.

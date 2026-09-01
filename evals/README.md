@@ -3,6 +3,16 @@
 Versioned tasks, rubrics, immutable split manifests, and frozen baseline reports live here.
 Never tune against `splits/test.jsonl`.
 
+The B4 world-model calibration evidence under `development/b4_calibration/` is explicitly
+development-only. It uses grader-hidden semantic invariants and a named prediction schema, and it
+cannot promote B4. Regrade it without loading the model with:
+
+```bash
+uv run python scripts/eval_b4_calibration.py regrade
+```
+
+The failed frozen B4h evidence remains unchanged under `baselines/b4h_qwen3_8_27b_ollama/`.
+
 The B1e cost report and linked MPS traces are frozen under `baselines/b1e_mps_*`. Regrade them
 offline from the repository root with:
 
